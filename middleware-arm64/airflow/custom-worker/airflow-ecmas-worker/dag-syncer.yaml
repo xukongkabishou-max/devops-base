@@ -1,0 +1,52 @@
+kind: ConfigMap
+metadata:
+  name: airflow-manifests-syncer
+data:
+  airflow-manifests-syncer.sh: |
+    #!/bin/bash
+    cp -frv /data/dag-in-host/airflow-dag/dev-*-dag.py /data/dag-in-pod
+    cp -frv /data/dag-in-host/* /data/airflow/job-files
+
+
+
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: dag-syncer
+spec:
+  template:
+    metadata:
+      labels:
+        app: dag-syncer
+    spec:
+      containers:
+      - name: dag-syncer
+        image: harbor.aliyun.com/middleware/busybox:1.37.0
+        command: ["/bin/bash", "-x"]
+        args: ["/app/airflow-manifests-syncer.sh"]
+        volumeMounts:
+        - name: dag-in-host
+          mountPath: /data/dag-in-host
+        - name: dag-in-pod
+          mountPath: /data/dag-in-pod
+        - name: airflow-manifests-syncer
+          mountPath: /app
+        - name: ecmas-infra-files
+          mountPath: /data/airflow/job-files
+      restartPolicy: Never
+      volumes:
+      - name: dag-in-host
+        hostPath:
+          path: /data/airflow/job-files
+          type: Directory
+      - name: dag-in-pod
+        persistentVolumeClaim:
+          claimName: airflow-dags
+      - name: airflow-manifests-syncer
+        configMap:
+          name: airflow-manifests-syncer
+      - name: ecmas-infra-files
+        persistentVolumeClaim:
+          claimName: airflow-ecmas-infra-files
+  backoffLimit: 3

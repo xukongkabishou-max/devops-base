@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: elasticsearch-head
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: elasticsearch-head
+  template:
+    metadata:
+      labels:
+        app: elasticsearch-head
+    spec:
+      containers:
+        - name: elasticsearch-head
+          image: swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/mobz/elasticsearch-head:5
+          ports:
+            - containerPort: 9100
+          env:
+            - name: ES_HOST
+              value: "elasticsearch-master-headless"  # 修改为你的 Elasticsearch 服务名称
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: elasticsearch-head
+spec:
+  selector:
+    app: elasticsearch-head
+  ports:
+    - name: http   # 添加了 name
+      protocol: TCP
+      port: 9100   # 内部服务端口
+      targetPort: 9100
+    - name: nodeport   # 添加了 name
+      protocol: TCP
+      port: 9201   # 映射的外部端口
+      targetPort: 9100  # 仍然映射到容器内部的 9100 端口
+      nodePort: 30005  # 指定外部访问端口 30005
+  type: NodePort

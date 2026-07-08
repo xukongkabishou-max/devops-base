@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: myminio-console-nodeport  # 新 Service 名称，避免与原服务冲突
+  annotations:
+    prometheus.io/scrape: "true"  # 允许 Prometheus 自动抓取指标[4,6](@ref)
+    prometheus.io/port: "9443"    # 指定监控端口
+spec:
+  type: NodePort                 # 通过节点端口暴露服务
+  selector:
+    v1.min.io/tenant: myminio    # 必须与原 Service 的 SELECTOR 一致（见用户输出）
+  ports:
+    - name: http-console
+      port: 9090                 # Service 的虚拟端口
+      targetPort: 9090            # 后端 Pod 的实际端口
+      nodePort: 31000             # 节点端口（范围 30000-32768），可省略由系统分配

@@ -1,0 +1,36 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: loki-rules-configmap
+  namespace: observe
+  labels:
+    app: loki-rules
+data:
+  loki-rules.yaml: |
+    groups:
+      - name: test-namespace-error-alert
+        rules:
+          - alert: TestNamespaceErrorLog
+            expr: |
+              sum by (namespace, pod, container) (
+                count_over_time({namespace="test"} |~ "(?i)error" [30s])
+              ) > 0
+            for: 0s
+            labels:
+              severity: warning
+              namespace: "{{ $labels.namespace }}"
+              pod: "{{ $labels.pod }}"
+              container: "{{ $labels.container }}"
+            annotations:
+              summary: "检测到 {{ $labels.namespace }} 命名空间 Pod 日志异常"
+              description: |
+                检测到 {{ $labels.namespace }} 命名空间下 Pod【{{ $labels.pod }}】的容器【{{ $labels.container }}】在 30 秒内产生 error 日志。
+
+                命名空间: {{ $labels.namespace }}
+                Pod: {{ $labels.pod }}
+                容器: {{ $labels.container }}
+                命中次数: {{ printf "%.0f" $value }}
+
+                说明: 即使 Pod 当前已经退出，只要 Loki 中仍保留日志，也可以通过下方链接查看。
+                <a href="http://192.168.4.100:30001/d/k8s-loki-alert-logs/k8s-alert-loki-logs?orgId=1&from=now-30m&to=now&timezone=browser&var-namespace={{ $labels.namespace }}&var-pod={{ $labels.pod }}&var-container={{ $labels.container }}&var-log_context=(?i)error&var-log_level=&var-api=">查看详情</a>
+                

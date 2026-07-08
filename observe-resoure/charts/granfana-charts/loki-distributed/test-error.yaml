@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: error-log-generator
+  namespace: test
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: error-log-generator
+  template:
+    metadata:
+      labels:
+        app: error-log-generator
+    spec:
+      containers:
+      - name: error-log
+        image: swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/registry.cn-beijing.aliyuncs.com/acs/busybox:v1.29.2
+        imagePullPolicy: IfNotPresent
+        command:
+        - sh
+        - -c
+        - |
+          while true; do
+            echo "$(date) ERROR simulated error for loki alert testing";
+            sleep 5;
+          done

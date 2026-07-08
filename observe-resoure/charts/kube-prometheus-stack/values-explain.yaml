@@ -1,0 +1,5424 @@
+# kube-prometheus-stack 默认配置。
+# 这是一个 YAML 格式的文件。
+# 声明将传递给模板的变量。
+
+## 为 `app:` 标签提供一个名称来代替 kube-prometheus-stack
+##
+nameOverride: "kube-prom-stack"
+
+## 覆盖部署的命名空间
+##
+namespaceOverride: ""
+
+## 为自动导入仪表盘脚本提供一个 Kubernetes 版本，例如：kubeTargetVersionOverride: 1.26.6
+##
+kubeTargetVersionOverride: ""
+
+## 允许在创建 ingress 时覆盖 Kubernetes 版本
+##
+kubeVersionOverride: ""
+
+## 提供一个名称来替代资源的完整名称
+##
+fullnameOverride: ""
+
+## 应用于所有资源的标签
+##
+commonLabels: {}
+# scmhash: abc123
+# myLabel: aakkmd
+
+## 安装 Prometheus Operator CRD
+##
+crds:
+  enabled: true
+  ## CRD 升级任务用于缓解 Helm 无法升级 CRD 的限制。
+  ## 该任务将使用 Helm Hook 在 Operator 部署之前将 CRD 应用到集群中。
+  ## 它会部署相应的 ClusterRole、ClusterRoleBinding 和 ServiceAccount 来应用 CRD。
+  ## 此功能处于预览阶段，默认关闭，未来可能会有变化。
+  upgradeJob:
+    enabled: false
+    forceConflicts: false
+    image:
+      busybox:
+        registry: docker.io
+        repository: busybox
+        tag: "latest"
+        sha: ""
+        pullPolicy: IfNotPresent
+      kubectl:
+        registry: registry.k8s.io
+        repository: kubectl
+        tag: ""  # 默认为 Kubernetes 版本
+        sha: ""
+        pullPolicy: IfNotPresent
+
+    env: {}
+    ## 定义单个 Pod 的资源请求和限制。
+    ## 参考: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+    ##
+    resources: {}
+
+    ## 额外的卷
+    ##
+    extraVolumes: []
+
+    ## 额外的卷挂载
+    ##
+    extraVolumeMounts: []
+
+    ## 定义 Pods 被调度到哪些节点上。
+    ## 参考: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#nodeselector
+    ##
+    nodeSelector: {}
+
+    ## 为 upgrade-crd 任务分配自定义亲和性规则
+    ## 参考: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/
+    ##
+    affinity: {}
+    # nodeAffinity:
+    #   requiredDuringSchedulingIgnoredDuringExecution:
+    #     nodeSelectorTerms:
+    #     - matchExpressions:
+    #       - key: kubernetes.io/e2e-az-name
+    #         operator: In
+    #         values:
+    #         - e2e-az1
+    #         - e2e-az2
+
+    ## 如果指定，则为 Pod 的容忍度。
+    ## 参考: https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/
+    ##
+    tolerations: []
+    # - key: "key"
+    #   operator: "Equal"
+    #   value: "value"
+    #   effect: "NoSchedule"
+
+    ## 如果指定，则为 Pod 的拓扑分布约束。
+    ## 参考: https://kubernetes.io/docs/concepts/scheduling-eviction/topology-spread-constraints/
+    ##
+    topologySpreadConstraints: []
+    # - maxSkew: 1
+    #   topologyKey: topology.kubernetes.io/zone
+    #   whenUnsatisfiable: DoNotSchedule
+    #   labelSelector:
+    #     matchLabels:
+    #       app: alertmanager
+
+    # ## 添加到 upgrade-crd 任务的标签
+    # ##
+    labels: {}
+
+    ## 添加到 upgrade-crd 任务的注解
+    ##
+    annotations: {}
+
+    ## 添加到 upgrade-crd Pod 的标签
+    ##
+    podLabels: {}
+
+    ## 添加到 upgrade-crd Pod 的注解
+    ##
+    podAnnotations: {}
+
+    ## upgrade-crd 任务使用的服务账户。
+    ## 参考: https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/
+    ##
+    serviceAccount:
+      create: true
+      name: ""
+      annotations: {}
+      labels: {}
+      automountServiceAccountToken: true
+
+    ## 容器特定的安全上下文配置
+    ## 参考: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
+    ##
+    containerSecurityContext:
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      capabilities:
+        drop:
+          - ALL
+
+    ## SecurityContext 包含 Pod 级别的安全属性和通用的容器设置。
+    ## 默认使用非 root 用户，UID 为 1000，GID 为 2000。*v1.PodSecurityContext false
+    ## 参考: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
+    ##
+    podSecurityContext:
+      fsGroup: 65534
+      runAsGroup: 65534
+      runAsNonRoot: true
+      runAsUser: 65534
+      seccompProfile:
+        type: RuntimeDefault
+
+## 自定义规则，用于覆盖 defaultRules 中的 "for" 和 "severity"
+##
+customRules: {}
+  # AlertmanagerFailedReload:
+  #   for: 3m
+  # AlertmanagerMembersInconsistent:
+  #   for: 5m
+  #   severity: "warning"
+
+## 为集群prometheus监控创建默认规则
+##
+defaultRules:
+  create: false
+  rules:
+    alertmanager: true
+    etcd: true
+    configReloaders: true
+    general: true
+    k8sContainerCpuUsageSecondsTotal: true
+    k8sContainerMemoryCache: true
+    k8sContainerMemoryRss: true
+    k8sContainerMemorySwap: true
+    k8sContainerResource: true
+    k8sContainerMemoryWorkingSetBytes: true
+    k8sPodOwner: true
+    kubeApiserverAvailability: true
+    kubeApiserverBurnrate: true
+    kubeApiserverHistogram: true
+    kubeApiserverSlos: true
+    kubeControllerManager: true
+    kubelet: true
+    kubeProxy: true
+    kubePrometheusGeneral: true
+    kubePrometheusNodeRecording: true
+    kubernetesApps: true
+    kubernetesResources: true
+    kubernetesStorage: true
+    kubernetesSystem: true
+    kubeSchedulerAlerting: true
+    kubeSchedulerRecording: true
+    kubeStateMetrics: true
+    network: true
+    node: true
+    nodeExporterAlerting: true
+    nodeExporterRecording: true
+    prometheus: true
+    prometheusOperator: true
+    windows: true
+
+  # 定义operator来监控哪些命名空间选择的运算符
+  # 使用 "=~" 来包含与模式匹配的命名空间（默认）
+  # 使用 "!~" 来排除与模式匹配的命名空间
+  appNamespacesOperator: ".*"
+
+  ## 缩小应用命名空间警报范围，.*为监控所有命名空间
+  appNamespacesTarget: ".*"
+
+  ## 设置所有警报的 keep_firing_for
+  keepFiringFor: ""
+
+  ## 默认规则的标签
+  labels: {}
+  ## 默认规则的注解
+  annotations: {}
+
+  ## PrometheusRule 警报的额外标签
+  additionalRuleLabels: {}
+
+  ## PrometheusRule 警报的额外注解
+  additionalRuleAnnotations: {}
+
+  ## 特定 PrometheusRule 警报组的额外标签
+  additionalRuleGroupLabels:
+    alertmanager: {}
+    etcd: {}
+    configReloaders: {}
+    general: {}
+    k8sContainerCpuUsageSecondsTotal: {}
+    k8sContainerMemoryCache: {}
+    k8sContainerMemoryRss: {}
+    k8sContainerMemorySwap: {}
+    k8sContainerResource: {}
+    k8sPodOwner: {}
+    kubeApiserverAvailability: {}
+    kubeApiserverBurnrate: {}
+    kubeApiserverHistogram: {}
+    kubeApiserverSlos: {}
+    kubeControllerManager: {}
+    kubelet: {}
+    kubeProxy: {}
+    kubePrometheusGeneral: {}
+    kubePrometheusNodeRecording: {}
+    kubernetesApps: {}
+    kubernetesResources: {}
+    kubernetesStorage: {}
+    kubernetesSystem: {}
+    kubeSchedulerAlerting: {}
+    kubeSchedulerRecording: {}
+    kubeStateMetrics: {}
+    network: {}
+    node: {}
+    nodeExporterAlerting: {}
+    nodeExporterRecording: {}
+    prometheus: {}
+    prometheusOperator: {}
+
+  ## 特定 PrometheusRule 警报组的额外注解
+  additionalRuleGroupAnnotations:
+    alertmanager: {}
+    etcd: {}
+    configReloaders: {}
+    general: {}
+    k8sContainerCpuUsageSecondsTotal: {}
+    k8sContainerMemoryCache: {}
+    k8sContainerMemoryRss: {}
+    k8sContainerMemorySwap: {}
+    k8sContainerResource: {}
+    k8sPodOwner: {}
+    kubeApiserverAvailability: {}
+    kubeApiserverBurnrate: {}
+    kubeApiserverHistogram: {}
+    kubeApiserverSlos: {}
+    kubeControllerManager: {}
+    kubelet: {}
+    kubeProxy: {}
+    kubePrometheusGeneral: {}
+    kubePrometheusNodeRecording: {}
+    kubernetesApps: {}
+    kubernetesResources: {}
+    kubernetesStorage: {}
+    kubernetesSystem: {}
+    kubeSchedulerAlerting: {}
+    kubeSchedulerRecording: {}
+    kubeStateMetrics: {}
+    network: {}
+    node: {}
+    nodeExporterAlerting: {}
+    nodeExporterRecording: {}
+    prometheus: {}
+    prometheusOperator: {}
+
+  additionalAggregationLabels: []
+
+  ## 运行手册 URL 前缀。用于覆盖所有规则共有的运行手册 URL 的第一部分。
+  runbookUrl: "https://runbooks.prometheus-operator.dev/runbooks"
+
+  #fsSelector 决定 Node Exporter 收集哪些磁盘/分区的使用数据
+   #'fstype!=""' → 全部非空文件系统
+    #fstype=~"ext[234]|btrfs|xfs|zfs"' → 只收集常用磁盘类型
+  node:
+    fsSelector: 'fstype!=""'
+    # fsSelector: 'fstype=~"ext[234]|btrfs|xfs|zfs"'
+
+  ## 禁用的 PrometheusRule 警报
+  disabled: {}
+  # KubeAPIDown: true
+  # NodeRAIDDegraded: true
+
+## 不再推荐使用的方式，用于提供要部署到集群中的自定义记录或警报规则。
+##
+# additionalPrometheusRules: []
+#  - name: my-rule-file
+#    groups:
+#      - name: my_group
+#        rules:
+#        - record: my_record
+#          expr: 100 * my_record
+
+## 提供要部署到集群中的自定义记录或警报规则。
+##
+additionalPrometheusRulesMap: {}
+#  rule-name:
+#    groups:
+#    - name: my_group
+#      rules:
+#      - record: my_record
+#        expr: 100 * my_record
+
+##
+global:
+  rbac:
+    create: true
+
+    ## 创建 ClusterRole，用于扩展现有的 view、edit 和 admin ClusterRoles，以便与 prometheus-operator CRD 交互
+    ## 参考: https://kubernetes.io/docs/reference/access-authn-authz/rbac/#aggregated-clusterroles
+    createAggregateClusterRoles: false
+
+  ## 全局镜像仓库，如果因某些特定用例（例如本地仓库、自定义镜像等）需要覆盖，则可以使用
+  ##
+  imageRegistry: ""
+
+  ## 引用一个或多个用于拉取镜像的 Secret
+  ## 参考: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+  ##
+  imagePullSecrets: []
+  # - name: "image-pull-secret"
+  # or
+  # - "image-pull-secret"
+
+windowsMonitoring:
+  ## 部署 windows-exporter 和 Windows 特定的仪表盘和规则（任务名必须是 'windows-exporter'）
+  enabled: false
+
+## prometheus-windows-exporter 的配置
+## 参考: https://github.com/prometheus-community/helm-charts/tree/main/charts/prometheus-windows-exporter
+##
+prometheus-windows-exporter:
+  ## 启用 ServiceMonitor 并设置用作任务标签的 Kubernetes 标签
+  ##
+  prometheus:
+    monitor:
+      enabled: true
+      jobLabel: jobLabel
+
+  releaseLabel: true
+
+  ## 将任务标签设置为 'windows-exporter'，这是默认 Prometheus 规则和 Grafana 仪表盘所要求的
+  ##
+  podLabels:
+    jobLabel: windows-exporter
+
+  ## 启用内存和容器指标，这是默认 Prometheus 规则和 Grafana 仪表盘所要求的
+  ##
+  config: |-
+    collectors:
+      enabled: '[defaults],memory,container'
+
+#alertmanager  实例配置
+prometheusalert:
+  image: harbor.aliyun.com/middleware/feiyu563/prometheus-alert:v4.9.1-custom
+  service:
+    nodePort: 30084
+  resources:
+    limits:
+      cpu: 200m
+      memory: 200Mi
+    requests:
+      cpu: 100m
+      memory: 100Mi
+  config:
+    #告警消息标题
+    title: 【test】监控告警
+    username: prometheusalert
+    password: prometheusalert
+    ## 飞书机器人 webhook 地址
+    feishu:
+      fsurl: https://open.feishu.cn/open-apis/bot/v2/hook/99dee9cb-bf9f-43d5-aac4-02ee74699a4e
+    ## 企业微信机器人地址
+    weixin:
+      wxurl: https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxxxx
+    ## 钉钉告警配置
+    dingding:
+      ddurl: https://oapi.dingtalk.com/robot/send?access_token=xxxxx
+      ## 是否开启 @所有人(0为关闭,1为开启)
+      ddIsatall: 1
+      #是否开启钉钉机器人加签，0为关闭,1为开启
+      # 使用方法：https://oapi.dingtalk.com/robot/send?access_token=XXXXXX&secret=mysecret
+      openDingdingSecret: 0
+    ## 邮件告警配置
+    email:
+      ## 邮件发件服务器地址
+      emailHost: smtp.feishu.cn
+      ## 邮件发件服务器端口
+      emailPort: 465
+      ## 邮件帐号
+      emailUser: alarm@aliyun.cn
+      ## 邮件密码
+      emailPassword: Vxxxx
+      ## 邮件标题
+      emailTitle: 【test】监控告警
+      ## 默认发送邮箱(收件人), 逗号分隔多个邮件地址
+      defaultEmails: caosikai@ecmas.ai
+
+## Alertmanager 的配置
+## 参考: https://prometheus.io/docs/alerting/alertmanager/
+##
+alertmanager:
+
+  ## 部署 Alertmanager
+  ##
+  enabled: true
+
+  # 可选：覆盖 Alertmanager 的部署命名空间。
+  namespaceOverride: ""
+
+  ## Alertmanager 的注解
+  ##
+  annotations: {}
+
+  ## Alertmanager 的额外标签
+  ##
+  additionalLabels: {}
+
+  ## Prometheus 将用来与 Alertmanager 通信的 API 版本。可能的值为 v1, v2
+  ##
+  apiVersion: v2
+
+  ## @param alertmanager.enableFeatures 启用对 Alertmanager 已禁用功能的访问。
+  ##
+  enableFeatures: []
+
+  ## 即使 Alertmanager 部署已禁用，也创建仪表盘配置映射
+  ##
+  forceDeployDashboards: false
+
+  ## 网络策略配置
+  ##
+  networkPolicy:
+    # -- 为 Alertmanager 启用网络策略
+    enabled: false
+
+    # -- 定义策略类型。如果 egress 启用，将同时使用 Ingress 和 Egress
+    # 有效值为 ["Ingress"] 或 ["Ingress", "Egress"]
+    ##
+    policyTypes:
+      - Ingress
+
+    # -- 网关（以前称为 ingress 控制器）配置
+    ##
+    gateway:
+      # -- 网关命名空间
+      ##
+      namespace: ""
+      # -- 网关 Pod 标签
+      ##
+      podLabels: {}
+      # app.kubernetes.io/name: ingress-nginx
+
+    # -- 额外的自定义入站规则
+    ##
+    additionalIngress: []
+    # - from:
+    #   - namespaceSelector:
+    #       matchLabels:
+    #         name: another-namespace
+    #     podSelector:
+    #       matchLabels:
+    #         app: another-app
+    # - from:
+    #     - podSelector:
+    #         matchLabels:
+    #           app.kubernetes.io/name: loki
+    #   ports:
+    #     - port: 9093
+    #       protocol: TCP
+
+    # -- 配置出站规则
+    ##
+    egress:
+      # -- 启用出站规则。启用后，policyTypes 将包括 Egress
+      ##
+      enabled: false
+      # -- 自定义出站规则
+      ##
+      rules: []
+      # - to:
+      #   - namespaceSelector: {}
+      #     podSelector:
+      #       matchLabels:
+      #         name: smtp-relay
+      #   ports:
+      #   - port: 25
+      #     protocol: TCP
+
+    # -- 启用 Alertmanager 集群流量的规则
+    ##
+    enableClusterRules: true
+
+    # -- 配置监控组件规则
+    ##
+    monitoringRules:
+      # -- 启用来自 Prometheus 的入站流量
+      ##
+      prometheus: true
+      # -- 启用配置重载器指标的入站流量
+      ##
+      configReloader: true
+
+  ## Alertmanager 使用的服务账户。
+  ## 参考: https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/
+  ##
+  serviceAccount:
+    create: true
+    name: ""
+    annotations: {}
+    automountServiceAccountToken: true
+
+  ## 为 Alertmanager 配置 PodDisruptionBudget
+  ## 参考: https://kubernetes.io/docs/tasks/run-application/configure-pdb/#specifying-a-poddisruptionbudget
+  ##
+  podDisruptionBudget:
+    enabled: false
+    minAvailable: 1
+    # maxUnavailable: ""
+    unhealthyPodEvictionPolicy: AlwaysAllow
+
+  ## Alertmanager 配置指令
+  ## 参考: https://prometheus.io/docs/alerting/configuration/#configuration-file
+  ##      https://prometheus.io/webtools/alerting/routing-tree-editor/
+  ##
+  config:
+    global:
+      resolve_timeout: 10m
+    inhibit_rules:
+      - source_matchers:
+          - 'severity = critical'
+        target_matchers:
+          - 'severity =~ warning|info'
+        equal:
+          - 'namespace'
+          - 'alertname'
+      - source_matchers:
+          - 'severity = warning'
+        target_matchers:
+          - 'severity = info'
+        equal:
+          - 'namespace'
+          - 'alertname'
+      - source_matchers:
+          - 'alertname = InfoInhibitor'
+        target_matchers:
+          - 'severity = info'
+        equal:
+          - 'namespace'
+      - target_matchers:
+          - 'alertname = InfoInhibitor'
+    route:
+      group_by: ['namespace', 'instance', 'alertname', 'severity']
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 60m
+      receiver: 'web.hook.promalert.feishu'
+      routes:
+      - receiver: 'web.hook.promalert.feishu'
+        continue: true
+      - receiver: 'web.hook.promalert.email'
+      - receiver: 'null'
+        matchers:
+          - alertname = "Watchdog"
+    receivers:
+    - name: 'web.hook.promalert.feishu'
+      webhook_configs:
+      - url: 'http://prometheus-alert-center:8080/prometheusalert?type=fs&tpl=fs-tpl-pretty&fsurl=https://open.feishu.cn/open-apis/bot/v2/hook/99dee9cb-bf9f-43d5-aac4-02ee74699a4e&split=false'
+        send_resolved: false
+    - name: 'web.hook.promalert.email'
+      webhook_configs:
+      - url: 'http://prometheus-alert-center:8080/prometheusalert?type=email&tpl=email-tpl-pretty&email=caosikai@ecmas.ai&split=false'
+        send_resolved: true
+      # - url: 'http://prometheus-alert-center:8080/prometheusalert?type=email&tpl=email-tpl-pretty&split=false'
+    - name: 'null'
+    templates:
+    - '/etc/alertmanager/config/*.tmpl'
+
+
+  ## Alertmanager 配置指令（字符串类型，优先于 config 哈希映射）
+  ## 只有当 tplConfig 为 true 时，stringConfig 才会被使用
+  ## 参考: https://prometheus.io/docs/alerting/configuration/#configuration-file
+  ##      https://prometheus.io/webtools/alerting/routing-tree-editor/
+  ##
+  stringConfig: ""
+
+  ## 将 Alertmanager 配置指令通过 Helm 的模板引擎传递
+  ## 如果 Alertmanager 配置包含 Alertmanager 模板，它们需要正确转义，以避免被 Helm 解释
+  ## 参考: https://helm.sh/docs/developing_charts/#using-the-tpl-function
+  ##      https://prometheus.io/docs/alerting/configuration/#tmpl_string
+  ##      https://prometheus.io/docs/alerting/notifications/
+  ##      https://prometheus.io/docs/alerting/notification_examples/
+  tplConfig: false
+
+  ## Alertmanager 模板文件，用于格式化警报
+  ## 默认情况下，模板文件放在 /etc/alertmanager/config/，并且如果它们有 .tmpl 文件后缀，就会被加载。
+  ## 参见上面的 config.templates 来更改或添加其他后缀。如果添加其他后缀，请务必更新上面的 config.templates 以包含这些后缀。
+  ## 参考: https://prometheus.io/docs/alerting/notifications/
+  ##      https://prometheus.io/docs/alerting/notification_examples/
+  ##
+  templateFiles: {}
+  #
+  ## 示例模板：
+  #   template_1.tmpl: |-
+  #       {{ define "cluster" }}{{ .ExternalURL | reReplaceAll ".*alertmanager\\.(.*)" "$1" }}{{ end }}
+  #
+  #       {{ define "slack.myorg.text" }}
+  #       {{- $root := . -}}
+  #       {{ range .Alerts }}
+  #         *Alert:* {{ .Annotations.summary }} - `{{ .Labels.severity }}`
+  #         *Cluster:* {{ template "cluster" $root }}
+  #         *Description:* {{ .Annotations.description }}
+  #         *Graph:* <{{ .GeneratorURL }}|:chart_with_upwards_trend:>
+  #         *Runbook:* <{{ .Annotations.runbook }}|:spiral_note_pad:>
+  #         *Details:*
+  #           {{ range .Labels.SortedPairs }} - *{{ .Name }}:* `{{ .Value }}`
+  #           {{ end }}
+  #       {{ end }}
+  #       {{ end }}
+
+  ingress:
+    enabled: false
+
+    ingressClassName: ""
+
+    annotations: {}
+
+    labels: {}
+
+    ## 覆盖 ingress 到服务上不同的已定义端口
+    # servicePort: 8081
+    ## 覆盖 ingress 到非默认服务，这对于需要指向特定 Alertmanager 实例（例如 kube-prometheus-stack-alertmanager-0）很有用
+    # serviceName: kube-prometheus-stack-alertmanager-0
+
+    ## 如果 Ingress 已启用，必须提供主机。
+    ##
+    hosts: []
+      # - alertmanager.domain.com
+
+    ## 用于 ingress 规则的路径 - 一个路径应该匹配 alertmanagerSpec.routePrefix
+    ##
+    paths: []
+    # - /
+
+    ## 对于 Kubernetes >= 1.18，您应该指定 pathType（确定 Ingress 路径应如何匹配）
+    ## 参见 https://kubernetes.io/blog/2020/04/02/improvements-to-the-ingress-api-in-kubernetes-1.18/#better-path-matching-with-path-types
+    # pathType: ImplementationSpecific
+
+    ## Alertmanager Ingress 的 TLS 配置
+    ## Secret 必须在命名空间中手动创建
+    ##
+    tls: []
+    # - secretName: alertmanager-general-tls
+    #   hosts:
+    #   - alertmanager.example.com
+
+  # -- BETA: 在此处配置图表的网关路由。
+  # 可以通过添加像 'main' 路由一样的字典键来添加更多路由。
+  # 请注意，这是该功能的早期 Beta 版本，
+  # kube-prometheus-stack 不保证其正常工作，且未来可能会有变化。
+  # 由于是 BETA 版本，它可能会/将会发生变化，恕不另行通知，除非您愿意承担风险，否则请勿使用。
+  # [[ref]](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io%2fv1alpha2)
+  route:
+    main:
+      # -- 启用或禁用路由
+      enabled: false
+
+      # -- 设置路由 apiVersion，例如 gateway.networking.k8s.io/v1 或 gateway.networking.k8s.io/v1alpha2
+      apiVersion: gateway.networking.k8s.io/v1
+      # -- 设置路由类型
+      # 有效选项为 GRPCRoute, HTTPRoute, TCPRoute, TLSRoute, UDPRoute
+      kind: HTTPRoute
+
+      annotations: {}
+      labels: {}
+
+      hostnames: []
+      # - my-filter.example.com
+      parentRefs: []
+      # - name: acme-gw
+
+      # -- 创建用于重定向的 http 路由 (https://gateway-api.sigs.k8s.io/guides/http-redirect-rewrite/#http-to-https-redirects)
+      ## 请注意，只在网关的 http 监听器上启用此功能，以避免无限重定向。
+      ## 如果此项设置为 true，matches、filters 和 additionalRules 将被忽略。
+      httpsRedirect: false
+
+      matches:
+        - path:
+            type: PathPrefix
+            value: /
+
+      ## Filters 定义应用于匹配此规则的请求的过滤器。
+      filters: []
+
+      ## 可以添加到路由的额外自定义规则
+      additionalRules: []
+
+  ## Alertmanager Secret 的配置
+  ##
+  secret:
+    annotations: {}
+
+  ## 配置创建 Ingress，该 Ingress 将映射到每个 Alertmanager 副本服务
+  ## 必须启用 alertmanager.servicePerReplica
+  ##
+  ingressPerReplica:
+    enabled: false
+
+    ingressClassName: ""
+
+    annotations: {}
+    labels: {}
+
+    ## 每个副本 ingress 的最终主机名形式为
+    ## {{ ingressPerReplica.hostPrefix }}-{{ $replicaNumber }}.{{ ingressPerReplica.hostDomain }}
+    ##
+    ## 每个副本 ingress 的前缀，末尾会附加 `-$replicaNumber`
+    hostPrefix: ""
+    ## 每个副本 ingress 将使用的域
+    hostDomain: ""
+
+    ## 用于 ingress 规则的路径
+    ##
+    paths: []
+    # - /
+
+    ## 对于 Kubernetes >= 1.18，您应该指定 pathType（确定 Ingress 路径应如何匹配）
+    ## 参见 https://kubernetes.io/blog/2020/04/02/improvements-to-the-ingress-api-in-kubernetes-1.18/#better-path-matching-with-path-types
+    # pathType: ImplementationSpecific
+
+    ## 包含 Alertmanager 每个副本 ingress 的 TLS 证书的 Secret 名称
+    ## Secret 必须在命名空间中手动创建
+    tlsSecretName: ""
+
+    ## 为每个副本 Ingress 分离的 Secret。可与 cert-manager 一起使用
+    ##
+    tlsSecretPerReplica:
+      enabled: false
+      ## 每个副本 ingress 的最终 Secret 名称形式为
+      ## {{ tlsSecretPerReplica.prefix }}-{{ $replicaNumber }}
+      ##
+      prefix: "alertmanager"
+
+  ## Alertmanager Service 的配置
+  ##
+  service:
+    enabled: true
+    annotations: {}
+    labels: {}
+    clusterIP: ""
+    ipDualStack:
+      enabled: false
+      ipFamilies: ["IPv6", "IPv4"]
+      ipFamilyPolicy: "PreferDualStack"
+
+    ## Alertmanager 服务监听的端口
+    ##
+    port: 9093
+    ## Alertmanager 集群通信的端口
+    ##
+    # clusterPort: 9094
+    ## 用于代理额外容器端口
+    ##
+    targetPort: 9093
+    ## 在每个节点上公开的端口
+    ## 仅当 service.type 为 'NodePort' 时使用
+    ##
+    nodePort: 30002
+    ## Prometheus 服务器服务可用的 IP 地址列表
+    ## 参考: https://kubernetes.io/docs/concepts/services-networking/service/#external-ips
+    ##
+    externalIPs: []
+    loadBalancerIP: ""
+    loadBalancerSourceRanges: []
+
+    ## 表示此服务是否希望将外部流量路由到节点本地或集群范围的端点
+    ##
+    externalTrafficPolicy: Cluster
+
+    ## 如果您想确保来自特定客户端的连接每次都传递到同一个 Pod
+    ## 接受 'ClientIP' 或 'None'
+    ##
+    sessionAffinity: None
+
+    ## 如果您想修改 ClientIP 会话亲和性超时时间
+    ## 当 ServiceAffinity == "ClientIP" 时，值必须 >0 且 <=86400（1天）
+    ##
+    sessionAffinityConfig:
+      clientIP:
+        timeoutSeconds: 10800
+
+    ## 服务类型
+    ##
+    type: NodePort
+
+  ## 配置为每个有状态集 Alertmanager 副本创建单独的服务
+  ##
+  servicePerReplica:
+    enabled: false
+    annotations: {}
+
+    ## Alertmanager 每个副本服务监听的端口
+    ##
+    port: 9093
+
+    ## 用于代理额外容器端口
+    targetPort: 9093
+
+    ## 在每个节点上公开的端口
+    ## 仅当 servicePerReplica.type 为 'NodePort' 时使用
+    ##
+    nodePort: 30002
+
+    ## Loadbalancer 源 IP 范围
+    ## 仅当 servicePerReplica.type 为 "LoadBalancer" 时使用
+    loadBalancerSourceRanges: []
+
+    ## 表示此服务是否希望将外部流量路由到节点本地或集群范围的端点
+    ##
+    externalTrafficPolicy: Cluster
+
+    ## 服务类型
+    ##
+    type: ClusterIP
+
+  ## 配置为 AlertManager 创建 ServiceMonitor
+  ##
+  serviceMonitor:
+    ## 如果为 true，将为 AlertManager 服务创建一个 ServiceMonitor。
+    ##
+    selfMonitor: true
+
+    ## 抓取间隔。如果未设置，则使用 Prometheus 默认的抓取间隔。
+    ##
+    interval: ""
+
+    ## 额外的标签
+    ##
+    additionalLabels: {}
+
+    ## SampleLimit 定义了每个抓取可接受的样本数量限制。
+    ##
+    sampleLimit: 0
+
+    ## TargetLimit 定义了每个抓取可接受的目标数量限制。
+    ##
+    targetLimit: 0
+
+    ## 每个抓取可接受的标签数量限制。仅在 Prometheus 2.27.0 及更高版本中有效。
+    ##
+    labelLimit: 0
+
+    ## 每个抓取可接受的标签名称长度限制。仅在 Prometheus 2.27.0 及更高版本中有效。
+    ##
+    labelNameLengthLimit: 0
+
+    ## 每个抓取可接受的标签值长度限制。仅在 Prometheus 2.27.0 及更高版本中有效。
+    ##
+    labelValueLengthLimit: 0
+
+    ## proxyUrl: 用于抓取的代理 URL。
+    ##
+    proxyUrl: ""
+
+    ## scheme: 用于抓取的 HTTP 方案。例如，在使用 istio mTLS 时可与 `tlsConfig` 一起使用。
+    scheme: ""
+
+    ## enableHttp2: 是否启用 HTTP2。
+    ## 参见 https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#endpoint
+    enableHttp2: true
+
+    ## tlsConfig: 抓取端点时使用的 TLS 配置。例如，在使用 istio mTLS 时。
+    ## 类型: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#tlsconfig
+    tlsConfig: {}
+
+    bearerTokenFile:
+
+    ## MetricRelabelConfigs，在抓取后、摄取前应用于样本。
+    ## 参考: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#relabelconfig
+    ##
+    metricRelabelings: []
+    # - action: keep
+    #   regex: 'kube_(daemonset|deployment|pod|namespace|node|statefulset).+'
+    #   sourceLabels: [__name__]
+
+    ## RelabelConfigs，在抓取前应用于样本。
+    ## 参考: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#relabelconfig
+    ##
+    relabelings: []
+    # - sourceLabels: [__meta_kubernetes_pod_node_name]
+    #   separator: ;
+    #   regex: ^(.*)$
+    #   targetLabel: nodename
+    #   replacement: $1
+    #   action: replace
+
+    ## 额外的端点
+    ##
+    additionalEndpoints: []
+    # - port: oauth-metrics
+    #   path: /metrics
+
+  ## 影响 alertmanagerSpec 的设置
+  ## 参考: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#alertmanagerspec
+  ##
+  alertmanagerSpec:
+    ## StatefulSet 的持久卷声明保留策略
+    ## whenDeleted 和 whenScaled 分别决定了
+    ## StatefulSet 的 PVC 在缩减和删除 StatefulSet 时是删除（true）还是保留（false）。
+    ## 需要 Kubernetes 版本 1.27.0+。
+    ## 参考: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#persistentvolumeclaim-retention
+    persistentVolumeClaimRetentionPolicy: {}
+    #  whenDeleted: Retain
+    #  whenScaled: Retain
+
+    ## 标准对象的元数据。更多信息: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#metadata
+    ## 元数据标签和注解会传播到 Alertmanager Pods。
+    ##
+    podMetadata: {}
+
+    ##
+    serviceName:
+
+    ## Alertmanager 镜像
+    ##
+    image:
+      registry: quay.io
+      repository: prometheus/alertmanager
+      tag: v0.28.1
+      sha: ""
+      pullPolicy: IfNotPresent
+
+    ## 如果为 true，则用户需要负责提供一个包含 Alertmanager 配置的 Secret
+    ## 因此，当为 true 时，config 部分将被忽略（包括 templateFiles），并使用 Secret 中的配置
+    ##
+    useExistingSecret: false
+
+    ## Secrets 是与 Alertmanager 对象在同一命名空间中的 Secret 列表，它们将被挂载到 Alertmanager Pods 中。
+    ## Secret 将被挂载到 /etc/alertmanager/secrets/。
+    ##
+    secrets: []
+
+    ## 如果为 false，则用户将选择不自动挂载 API 凭据。
+    ##
+    automountServiceAccountToken: true
+
+    ## ConfigMaps 是与 Alertmanager 对象在同一命名空间中的 ConfigMap 列表，它们将被挂载到 Alertmanager Pods 中。
+    ## ConfigMap 将被挂载到 /etc/alertmanager/configmaps/。
+    ##
+    configMaps: []
+
+    ## ConfigSecret 是与 Alertmanager 对象在同一命名空间中的 Kubernetes Secret 的名称，其中包含此 Alertmanager 实例的配置。
+    ## 默认为 'alertmanager-'。Secret 将被挂载到 /etc/alertmanager/config。
+    ##
+    # configSecret:
+
+    ## WebTLSConfig 定义 HTTPS 的 TLS 参数
+    ## 参考: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#alertmanagerwebspec
+    web: {}
+
+    ## 要选择的 AlertmanagerConfig，用于合并和配置 Alertmanager。
+    ##
+    alertmanagerConfigSelector: {}
+    ## 示例，选择所有带有 "alertconfig" 标签且值为 "example-config" 或 "example-config-2" 的 alertmanagerConfig 资源
+    # alertmanagerConfigSelector:
+    #   matchExpressions:
+    #     - key: alertconfig
+    #       operator: In
+    #       values:
+    #         - example-config
+    #         - example-config-2
+    #
+    ## 示例，选择所有带有 "role" 标签且值为 "example-config" 的 alertmanagerConfig 资源
+    # alertmanagerConfigSelector:
+    #   matchLabels:
+    #     role: example-config
+
+    ## 要选择的 AlertmanagerConfig 发现的命名空间。如果为 nil，则只检查自己的命名空间。
+    ##
+    alertmanagerConfigNamespaceSelector: {}
+    ## 示例，选择所有带有 "alertmanagerconfig" 标签且值为 "example-namespace" 或 "example-namespace-2" 的命名空间
+    # alertmanagerConfigNamespaceSelector:
+    #   matchExpressions:
+    #     - key: alertmanagerconfig
+    #       operator: In
+    #       values:
+    #         - example-namespace
+    #         - example-namespace-2
+
+    ## 示例，选择所有带有 "alertmanagerconfig" 标签且值为 "enabled" 的命名空间
+    # alertmanagerConfigNamespaceSelector:
+    #   matchLabels:
+    #     alertmanagerconfig: enabled
+
+    ## 用作顶级配置的 AlertmanagerConfig
+    ##
+    alertmanagerConfiguration: {}
+    ## 示例，选择一个全局 alertmanagerconfig
+    # alertmanagerConfiguration:
+    #   name: global-alertmanager-Configuration
+
+    ## 定义 AlertmanagerConfig 对象匹配警报时使用的策略。例如：
+    ##
+    alertmanagerConfigMatcherStrategy: {}
+    ## 示例，使用 OnNamespace 策略
+    # alertmanagerConfigMatcherStrategy:
+    #   type: OnNamespace
+
+    ## 传递给 Alertmanager 的额外命令行参数（除了图表生成的参数之外）
+    additionalArgs: []
+## 定义日志格式
+# 使用 logfmt (默认) 或 json 日志记录
+logFormat: logfmt
+
+## Alertmanager 的日志级别配置
+##
+logLevel: info
+
+## 预期中的 Alertmanager 集群大小。控制器最终将使运行中的集群大小等于预期大小。
+replicas: 1
+
+## Alertmanager 应该保留数据的时间。默认值为 '120h'，必须匹配正则表达式
+## [0-9]+(ms|s|m|h) (毫秒 秒 分钟 小时)。
+##
+retention: 120h
+
+## 存储是 Alertmanager 实例将如何使用存储的定义。
+## 参考: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/platform/storage.md
+##
+storage: {}
+# volumeClaimTemplate:
+#   spec:
+#     storageClassName: gluster
+#     accessModes: ["ReadWriteOnce"]
+#     resources:
+#       requests:
+#         storage: 50Gi
+#     selector: {}
+
+
+## Alertmanager 实例可用的外部 URL。这是生成正确 URL 所必需的。如果 Alertmanager 不是从 DNS 名称的根目录提供的，则这是必需的。string  false
+##
+externalUrl:
+
+## Alertmanager 注册 HTTP 处理程序的路由前缀。这很有用，如果使用 ExternalURL 并且代理正在重写请求的 HTTP 路由，并且实际的 ExternalURL 仍然为真，
+## 但服务器在不同的路由前缀下提供请求。例如，用于 kubectl 代理。
+##
+routePrefix: /
+
+## scheme: 要使用的 HTTP scheme。例如，如果使用 istio mTLS，可以与 `tlsConfig` 一起使用。
+scheme: ""
+
+## tlsConfig: 连接到端点时要使用的 TLS 配置。例如，如果使用 istio mTLS。
+## 类型: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#tlsconfig
+tlsConfig: {}
+
+## 如果设置为 true，则不会执行对底层托管对象的所有操作，除了删除操作。
+##
+paused: false
+
+## 定义 Pods 调度到哪些节点。
+## 参考: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#nodeselector
+##
+nodeSelector: {}
+
+## 定义单个 Pods 的资源请求和限制。
+## 参考: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+##
+resources: {}
+# requests:
+#   memory: 400Mi
+
+## Pod 反亲和性可以防止调度器将 Prometheus 副本放置在同一个节点上。
+## 默认值 "soft" 意味着调度器*倾向于*不将两个副本 Pods 调度到同一个节点上，但不提供保证。
+## 值 "hard" 意味着调度器*必须*不将两个副本 Pods 调度到同一个节点上。
+## 值 "" 将禁用 Pod 反亲和性，因此不会配置反亲和性规则。
+##
+podAntiAffinity: "soft"
+
+## 如果启用反亲和性，设置用于反亲和性的 topologyKey。
+## 这可以更改为，例如，failure-domain.beta.kubernetes.io/zone
+##
+podAntiAffinityTopologyKey: kubernetes.io/hostname
+
+## 为 alertmanager 实例分配自定义亲和性规则
+## 参考: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/
+##
+affinity: {}
+# nodeAffinity:
+#   requiredDuringSchedulingIgnoredDuringExecution:
+#     nodeSelectorTerms:
+#     - matchExpressions:
+#       - key: kubernetes.io/e2e-az-name
+#         operator: In
+#         values:
+#         - e2e-az1
+#         - e2e-az2
+
+## 如果指定，Pod 的容忍度。
+## 参考: https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/
+##
+tolerations: []
+# - key: "key"
+#   operator: "Equal"
+#   value: "value"
+#   effect: "NoSchedule"
+
+## 如果指定，Pod 的拓扑扩展约束。
+## 参考: https://kubernetes.io/docs/concepts/scheduling-eviction/topology-spread-constraints/
+##
+topologySpreadConstraints: []
+# - maxSkew: 1
+#   topologyKey: topology.kubernetes.io/zone
+#   whenUnsatisfiable: DoNotSchedule
+#   labelSelector:
+#     matchLabels:
+#       app: alertmanager
+
+## SecurityContext 包含 Pod 级别的安全属性和通用容器设置。
+## 默认设置为非 root 用户，UID 为 1000，GID 为 2000。*v1.PodSecurityContext  false
+## 参考: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
+##
+securityContext:
+  runAsGroup: 2000
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 2000
+  seccompProfile:
+    type: RuntimeDefault
+
+## ListenLocal 使 Alertmanager 服务器在 loopback 上监听，这样它就不会绑定到 Pod IP。
+## 注意，这仅适用于 Alertmanager UI，不适用于 gossip 通信。
+##
+listenLocal: false
+
+## Containers 允许注入额外的容器。这是为了允许向 Alertmanager Pod 添加身份验证代理。
+##
+containers: []
+# containers:
+# - name: oauth-proxy
+#   image: quay.io/oauth2-proxy/oauth2-proxy:v7.10.0
+#   args:
+#   - --upstream=http://127.0.0.1:9093
+#   - --http-address=0.0.0.0:8081
+#   - --metrics-address=0.0.0.0:8082
+#   - ...
+#   ports:
+#   - containerPort: 8081
+#     name: oauth-proxy
+#     protocol: TCP
+#   - containerPort: 8082
+#     name: oauth-metrics
+#     protocol: TCP
+#   resources: {}
+
+# 输出 StatefulSet 定义中的额外卷。
+volumes: []
+
+# 输出 StatefulSet 定义中的额外 VolumeMounts。
+volumeMounts: []
+
+## InitContainers 允许注入额外的 initContainers。这是为了在启动 prometheus 之前对挂载的卷进行一些更改（权限，目录树）。
+initContainers: []
+
+## 分配给 Pods 的优先级类
+##
+priorityClassName: ""
+
+## AdditionalPeers 允许注入一组额外的 Alertmanager，以形成高可用性集群。
+##
+additionalPeers: []
+
+## Alert Manager 使用的 PortName。
+##
+portName: "http-web"
+
+## ClusterAdvertiseAddress 是在集群中明确宣传的地址。对于非 RFC1918 [1]（公共）地址需要提供。 [1] RFC1918: https://tools.ietf.org/html/rfc1918
+##
+clusterAdvertiseAddress: false
+
+## clusterGossipInterval 确定 gossip 尝试之间的间隔。
+## 需要指定为 GoDuration，一个可以被 Go 的 time.ParseDuration() 解析的时间持续时间（例如 45ms, 30s, 1m, 1h20m15s）
+clusterGossipInterval: ""
+
+## clusterPeerTimeout 确定集群对等超时。
+## 需要指定为 GoDuration，一个可以被 Go 的 time.ParseDuration() 解析的时间持续时间（例如 45ms, 30s, 1m, 1h20m15s）
+clusterPeerTimeout: ""
+
+## clusterPushpullInterval 确定推拉尝试之间的间隔。
+## 需要指定为 GoDuration，一个可以被 Go 的 time.ParseDuration() 解析的时间持续时间（例如 45ms, 30s, 1m, 1h20m15s）
+clusterPushpullInterval: ""
+
+## clusterLabel 定义唯一标识 Alertmanager 集群的标识符。
+clusterLabel: ""
+
+## ForceEnableClusterMode 确保当以单个副本运行时，Alertmanager 不会停用集群模式。
+## 用例是例如在每个 Kubernetes 集群中只有一个副本的情况下，跨 Kubernetes 集群扩展 Alertmanager 集群。
+forceEnableClusterMode: false
+
+## 一个新创建的 pod 应该在没有任何容器崩溃的情况下准备好的最小秒数，以便被认为是可用的。
+## 默认为 0（pod 一旦准备好就会被认为是可用的）。
+minReadySeconds: 0
+
+## 上述属性未涵盖的附加配置。（通过 tpl 传递）
+additionalConfig: {}
+
+## 上述属性未涵盖的附加配置。
+## 如果您需要 alertmanagerSpec 内的高级模板，则很有用。
+## 否则，请使用 alertmanager.alertmanagerSpec.additionalConfig（通过 tpl 传递）
+additionalConfigString: ""
+
+## ExtraSecret 可用于在额外 secret 中存储各种数据
+## （例如，用于存储哈希过的基本 auth 凭据）
+extraSecret:
+  ## 如果未设置，名称将自动生成
+  # name: ""
+  annotations: {}
+  data: {}
+#   auth: |
+#     foo:$apr1$OFG3Xybp$ckL0FHDAkoXYIlH9.cysT0
+#     someoneelse:$apr1$DMZX2Z4q$6SbQIfyuLQd.xmo/P0m2c.
+
+## 使用来自 https://github.com/grafana/helm-charts/blob/main/charts/grafana/values.yaml 的默认值
+##
+grafana:
+  enabled: true
+  namespaceOverride: ""
+
+  ## ForceDeployDatasources 即使 grafana 部署已被禁用，也创建数据源 configmap
+  ##
+  forceDeployDatasources: false
+
+  ## ForceDeployDashboard 即使 grafana 部署已被禁用，也创建仪表板 configmap
+  ##
+  forceDeployDashboards: false
+
+  ## 部署默认仪表板
+  ##
+  defaultDashboardsEnabled: false
+
+  ## 当使用 grafana-operator 时，部署引用 ConfigMaps 中仪表板的 GrafanaDashboard CRD
+  ## 这些设置控制仪表板如何与 Grafana Operator 集成
+  ## 注意: 最终用户仍然需要为 Prometheus 创建自己的 kind: GrafanaDataSource
+  ## 例如:
+  ## apiVersion: grafana.integreatly.org/v1beta1
+  ## kind: GrafanaDatasource
+  ## metadata:
+  ##   name: prometheus
+  ##   annotations: {}
+  ## spec:
+  ##   allowCrossNamespaceImport: true
+  ##   instanceSelector:
+  ##     matchLabels:
+  ##       app: grafana
+  ##   datasource:
+  ##     name: prometheus
+  ##     type: prometheus
+  ##     access: proxy
+  ##     url: http://prometheus-operated.prometheus-stack.svc.cluster.local:9090
+  ##     isDefault: true
+  ##     jsonData:
+  ##       "tlsSkipVerify": true
+  ##       "timeInterval": "5s"
+  ##
+  operator:
+    ## 启用对包含仪表板的 ConfigMaps 的引用，在 GrafanaDashboard CR 中
+    ## 设置为 true 以允许从 ConfigMap 引用加载仪表板
+    dashboardsConfigMapRefEnabled: false
+
+    ## GrafanaDashboard Cr 的注解
+    ##
+    annotations: {}
+    ## 应匹配的 kind: Grafana 实例的标签
+    ## 示例: { app: grafana, category: dashboard }
+    ##
+    matchLabels: {}
+
+    ## 操作员应多久重新同步一次资源（持续时间格式）
+    ## 控制操作员协调仪表板的频率
+    ##
+    resyncPeriod: 10m
+
+    ## Grafana 中所有仪表板的文件夹。General 意味着在根级别
+    ##
+    folder: General
+
+  ## 默认仪表板的时区
+  ## 其他选项: browser 或一个特定的时区，例如 Europe/Luxembourg
+  ##
+  defaultDashboardsTimezone: cst
+
+  ## 默认仪表板的可编辑标志
+  ##
+  defaultDashboardsEditable: true
+
+  ## Grafana 仪表板的默认间隔
+  ##
+  defaultDashboardsInterval: 1m
+
+  adminUser: admin
+  adminPassword: prom-operator
+
+  rbac:
+    ## 如果为 true，将创建 Grafana PSP
+    ##
+    pspEnabled: false
+
+  ingress:
+    ## 如果为 true，将创建 Grafana Ingress
+    ##
+    enabled: false
+
+    ## Grafana Ingress 的 IngressClassName。
+    ## 如果启用 Ingress，则应提供。
+    ##
+    # ingressClassName: nginx
+
+    ## Grafana Ingress 的注解
+    ##
+    annotations: {}
+      # kubernetes.io/ingress.class: nginx
+      # kubernetes.io/tls-acme: "true"
+
+    ## 要添加到 Ingress 的标签
+    ##
+    labels: {}
+
+    ## 主机名。
+    ## 如果启用 Ingress，则必须提供。
+    ##
+    # hosts:
+    #   - grafana.domain.com
+    hosts: []
+
+    ## grafana ingress 的路径
+    path: /
+
+    ## grafana Ingress 的 TLS 配置
+    ## Secret 必须在命名空间中手动创建
+    ##
+    tls: []
+    # - secretName: grafana-general-tls
+    #   hosts:
+    #   - grafana.example.com
+
+  # # 使 Grafana 持久化（使用 Statefulset）
+  # #
+  # persistence:
+  #   enabled: true
+  #   type: sts
+  #   storageClassName: "storageClassName"
+  #   accessModes:
+  #     - ReadWriteOnce
+  #   size: 20Gi
+  #   finalizers:
+  #     - kubernetes.io/pvc-protection
+
+  serviceAccount:
+    create: true
+    autoMount: true
+
+  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+      labelValue: "1"
+      # 允许在所有命名空间中发现仪表板
+      searchNamespace: ALL
+
+      # 支持新的表格面板，启用后，grafana 会自动将旧的表格面板迁移到新的表格面板
+      enableNewTablePanelSyntax: false
+
+      folder: /tmp/dashboards
+      folderAnnotation: k8s-sidecar-target-directory
+
+      ## Grafana 仪表板 configmaps 的注解
+      ##
+      annotations: {}
+      multicluster:
+        global:
+          enabled: false
+        etcd:
+          enabled: false
+      provider:
+        allowUiUpdates: false
+        foldersFromFilesStructure: true
+    datasources:
+      enabled: true
+      defaultDatasourceEnabled: true
+      isDefaultDatasource: false
+
+      name: Prometheus
+      uid: prometheus
+
+      ## prometheus 数据源的 URL
+      ##
+      url: http://kube-prom-stack-prometheus.observe.svc.cluster.local:9090
+
+      ## Prometheus 请求超时时间（秒）
+      # timeout: 30
+
+      # 如果未定义，将使用 prometheus.prometheusSpec.scrapeInterval 或其默认值
+      # defaultDatasourceScrapeInterval: 15s
+
+      ## Grafana 数据源 configmaps 的注解
+      ##
+      annotations: {}
+
+      ## 用于向数据源发送查询的 HTTP 方法
+      httpMethod: POST
+
+      ## 为每个 Prometheus StatefulSet 的 Pod 创建数据源；
+      ## 这默认使用由 Prometheus Operator 创建的无头服务 `prometheus-operated`。
+      ## 如果您为 Prometheus 实例部署了自己的服务，可以使用 `prometheusServiceName` 字段指定它
+      ## 参考: https://github.com/prometheus-operator/prometheus-operator/blob/0fee93e12dc7c2ea1218f19ae25ec6b893460590/pkg/prometheus/statefulset.go#L255-L286
+      createPrometheusReplicasDatasources: false
+      prometheusServiceName: prometheus-operated
+      label: grafana_datasource
+      labelValue: "1"
+
+      ## 指向 Grafana 中现有数据源的内部链接字段。
+      ## 可以通过 additionalDataSources 进行配置
+      exemplarTraceIdDestinations: {}
+        # datasourceUid: Jaeger
+        # traceIdLabelName: trace_id
+        # urlDisplayLabel: View traces
+      alertmanager:
+        enabled: true
+        name: Alertmanager
+        uid: alertmanager
+        handleGrafanaManagedAlerts: false
+        implementation: prometheus
+
+  extraConfigmapMounts: []
+  # - name: certs-configmap
+  #   mountPath: /etc/grafana/ssl/
+  #   configMap: certs-configmap
+  #   readOnly: true
+
+  deleteDatasources: []
+  # - name: example-datasource
+  #   orgId: 1
+
+  ## 配置附加的 grafana 数据源（通过 tpl 传递）
+  ## 参考: https://grafana.com/docs/grafana/latest/administration/provisioning/#datasources
+  additionalDataSources: 
+  # - name: prometheus-sample
+  #   access: proxy
+  #   basicAuth: true
+  #   secureJsonData:
+  #       basicAuthPassword: pass
+  #   basicAuthUser: daco
+  #   editable: false
+  #   jsonData:
+  #       tlsSkipVerify: true
+  #   orgId: 1
+  #   type: prometheus
+  #   url: https://{{ printf "%s-prometheus.svc" .Release.Name }}:9090
+  #   version: 1
+    - name: Loki
+      type: loki
+      uid: loki
+      access: proxy
+      url: http://loki-distributed-gateway.observe.svc.cluster.local
+      isDefault: false
+      editable: false
+      jsonData:
+        httpHeaderName1: "X-Scope-OrgID"
+      secureJsonData:
+        httpHeaderValue1: "fake"   # tenant 名称
+    - name: Jaeger
+      type: jaeger
+      url: http://jaeger-query.observe:16686
+      access: proxy
+      isDefault: false
+  # 标记已配置的数据源，如果不再配置，则进行删除。
+  # 如果数据源已在 deleteDatasources 部分列出，则无效。
+  # 参考: https://grafana.com/docs/grafana/latest/administration/provisioning/#example-data-source-configuration-file
+  prune: false
+
+  ## 传递给 grafana 子图表并由下面的 servicemonitor 使用
+  ##
+  service:
+    portName: http-web
+    ipFamilies: []
+    ipFamilyPolicy: ""
+
+  serviceMonitor:
+    # 如果为 true，则为 prometheus operator 创建 ServiceMonitor CRD
+    # https://github.com/prometheus-operator/prometheus-operator
+    #
+    enabled: true
+
+    # 用于抓取指标的路径。如果 grafana.ini 中设置了 server.root_url，则可能不同
+    #
+    path: "/metrics"
+
+    #  namespace: monitoring  (默认为部署此图表的命名空间)
+
+    # ServiceMonitor 的标签
+    labels: {}
+
+    # 抓取间隔。如果未设置，则使用 Prometheus 默认抓取间隔。
+    #
+    interval: ""
+    scheme: http
+    tlsConfig: {}
+    scrapeTimeout: 30s
+
+    ## 应用于抓取前样本的 RelabelConfigs
+    ## 参考: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#relabelconfig
+    ##
+    relabelings: []
+    # - sourceLabels: [__meta_kubernetes_pod_node_name]
+    #   separator: ;
+    #   regex: ^(.*)$
+    #   targetLabel: nodename
+    #   replacement: $1
+    #   action: replace
+
+## 禁用所有 kubernetes 组件抓取器的标志
+##
+kubernetesServiceMonitors:
+  enabled: true
+
+## 抓取 kube api 服务器的组件
+##
+kubeApiServer:
+  enabled: true
+  tlsConfig:
+    serverName: kubernetes
+    insecureSkipVerify: false
+  serviceMonitor:
+    enabled: true
+    ## 抓取间隔。如果未设置，则使用 Prometheus 默认抓取间隔。
+    ##
+    interval: ""
+
+    ## SampleLimit 定义每个抓取接受的抓取样本数量限制。
+    ##
+    sampleLimit: 0
+
+    ## TargetLimit 定义接受的抓取目标数量限制。
+    ##
+    targetLimit: 0
+
+    ## 每个抓取接受的样本标签数量限制。仅在 Prometheus 2.27.0 及更高版本中有效。
+    ##
+    labelLimit: 0
+
+    ## 每个抓取接受的样本标签名称长度限制。仅在 Prometheus 2.27.0 及更高版本中有效。
+    ##
+    labelNameLengthLimit: 0
+
+    ## 每个抓取接受的样本标签值长度限制。仅在 Prometheus 2.27.0 及更高版本中有效。
+    ##
+    labelValueLengthLimit: 0
+
+    ## proxyUrl: 应用于抓取的代理 URL。
+    ##
+    proxyUrl: ""
+
+    jobLabel: component
+    selector:
+      matchLabels:
+        component: apiserver
+        provider: kubernetes
+
+    ## 应用于抓取后、摄取前样本的 MetricRelabelConfigs。
+    ## 参考: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#relabelconfig
+    ##
+    metricRelabelings:
+      # 删除过度嘈杂的 apiserver buckets。
+      - action: drop
+        regex: (etcd_request|apiserver_request_slo|apiserver_request_sli|apiserver_request)_duration_seconds_bucket;(0\.15|0\.2|0\.3|0\.35|0\.4|0\.45|0\.6|0\.7|0\.8|0\.9|1\.25|1\.5|1\.75|2|3|3\.5|4|4\.5|6|7|8|9|15|20|40|45|50)(\.0)?
+        sourceLabels:
+          - __name__
+          - le
+    # - action: keep
+    #   regex: 'kube_(daemonset|deployment|pod|namespace|node|statefulset).+'
+    #   sourceLabels: [__name__]
+
+    ## 应用于抓取前样本的 RelabelConfigs
+    ## 参考: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#relabelconfig
+    ##
+    relabelings: []
+    # - sourceLabels:
+    #     - __meta_kubernetes_namespace
+    #     - __meta_kubernetes_service_name
+    #     - __meta_kubernetes_endpoint_port_name
+    #   action: keep
+    #   regex: default;kubernetes;https
+    # - targetLabel: __address__
+    #   replacement: kubernetes.default.svc:443
+
+    ## 附加标签
+    ##
+    additionalLabels: {}
+    #  foo: bar
+
+    ## 定义从关联的 Kubernetes Service 对象转移到摄取指标上的标签。
+    ## https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#servicemonitor
+    targetLabels: []
+
+## 抓取 kubelet 和 kubelet 托管的 cAdvisor 的组件
+##
+kubelet:
+  enabled: true
+  namespace: kube-system
+
+  serviceMonitor:
+    enabled: true
+    ## 启用从 kubelet 的服务抓取 /metrics
+    kubelet: true
+
+    ## 将元数据附加到发现的目标。需要 Prometheus v2.45，用于由操作员创建的端点。
+    ##
+    attachMetadata:
+      node: false
+
+    ## 抓取间隔。如果未设置，则使用 Prometheus 默认抓取间隔。
+    ##
+    interval: ""
+
+    ## 如果为 true，Prometheus 使用（尊重）导出器提供的标签。
+    ##
+    honorLabels: true
+
+    ## 如果为 true，Prometheus 摄取带有导出器提供的显式时间戳的指标。如果为 false，Prometheus 摄取带有抓取时间戳的指标。
+    ##
+    honorTimestamps: true
+
+    ## 如果为 true，定义 Prometheus 是否跟踪抓取数据中包含显式时间戳的指标的陈旧性。如果 `honorTimestamps` 为 false，则无效。
+    ## 如果您想要从 cadvisor 抓取的 container_ 指标获得最佳精度，我们建议启用此功能。
+    ## 更多细节请参阅: https://github.com/prometheus-community/helm-charts/pull/5063#issuecomment-2545374849
+    trackTimestampsStaleness: true
+
+    ## SampleLimit 定义每个抓取接受的抓取样本数量限制。
+    ##
+    sampleLimit: 0
+
+    ## TargetLimit 定义接受的抓取目标数量限制。
+    ##
+    targetLimit: 0
+
+    ## 每个抓取接受的样本标签数量限制。仅在 Prometheus 2.27.0 及更高版本中有效。
+    ##
+    labelLimit: 0
+
+    ## 每个抓取接受的样本标签名称长度限制。仅在 Prometheus 2.27.0 及更高版本中有效。
+    ##
+    labelNameLengthLimit: 0
+
+    ## 每个抓取接受的样本标签值长度限制。仅在 Prometheus 2.27.0 及更高版本中有效。
+    ##
+    labelValueLengthLimit: 0
+
+    ## proxyUrl: 应用于抓取的代理 URL。
+    ##
+    proxyUrl: ""
+
+    ## 启用通过 https 抓取 kubelet。要启用此功能，请参阅
+    ## https://github.com/prometheus-operator/prometheus-operator/issues/926 的要求
+    ##
+    https: true
+
+    ## 抓取时跳过 TLS 证书验证。
+    ## 这默认启用，因为 kubeadm 部署的 kubelet 服务证书默认是自签名。
+    ## 参考: https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/kubeadm-certs/#kubelet-serving-certs
+    ##
+    insecureSkipVerify: true
+
+    ## 启用从 kubelet 的服务抓取 /metrics/probes
+    ##
+    probes: true
+
+    ## 启用从 kubelet 的服务抓取 /metrics/resource
+    ## 默认禁用，因为容器指标已经由 cAdvisor 公开
+    ##
+    resource: false
+    # 从 kubernetes 1.18 开始，/metrics/resource/v1alpha1 重命名为 /metrics/resource
+    resourcePath: "/metrics/resource/v1alpha1"
+    ## 配置资源指标的抓取间隔。此值配置为默认 Kubelet cAdvisor
+    ## 最小内务间隔，以避免丢失样本。注意，如果 kubelet.serviceMonitor.interval 不为空，则此值被忽略。
+    resourceInterval: 10s
+
+    ## 启用从 kubelet 的服务抓取 /metrics/cadvisor
+    ##
+    cAdvisor: true
+    ## 配置 cAdvisor 的抓取间隔。此值配置为默认 Kubelet cAdvisor
+    ## 最小内务间隔，以避免丢失样本。注意，如果 kubelet.serviceMonitor.interval 不为空，则此值被忽略。
+    cAdvisorInterval: 10s
+    ## 应用于抓取后、摄取前样本的 MetricRelabelConfigs。
+    ## 参考: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#relabelconfig
+    ##
+    cAdvisorMetricRelabelings:
+      # 删除不太有用的容器 CPU 指标。
+      - sourceLabels: [__name__]
+        action: drop
+        regex: 'container_cpu_(cfs_throttled_seconds_total|load_average_10s|system_seconds_total|user_seconds_total)'
+      # 删除不太有用的 / 总是为零的容器文件系统指标。
+      - sourceLabels: [__name__]
+        action: drop
+        regex: 'container_fs_(io_current|io_time_seconds_total|io_time_weighted_seconds_total|reads_merged_total|sector_reads_total|sector_writes_total|writes_merged_total)'
+      # 删除不太有用的 / 总是为零的容器内存指标。
+      - sourceLabels: [__name__]
+        action: drop
+        regex: 'container_memory_(mapped_file|swap)'
+      # 删除不太有用的容器进程指标。
+      - sourceLabels: [__name__]
+        action: drop
+        regex: 'container_(file_descriptors|tasks_state|threads_max)'
+      # 删除 container_memory_failures_total{scope="hierarchy"} 指标，
+      # 我们只需要容器范围。
+      - sourceLabels: [__name__, scope]
+        action: drop
+        regex: 'container_memory_failures_total;hierarchy'
+      # 删除与各种接口匹配的 container_network_... 指标，
+      # 这些接口对应于 CNI 和类似接口。这避免了为 host network 容器捕获网络指标。
+      - sourceLabels: [__name__, interface]
+        action: drop
+        regex: 'container_network_.*;(cali|cilium|cni|lxc|nodelocaldns|tunl).*'
+      # 删除与 kube-state-metrics 重叠的容器 spec 指标。
+      - sourceLabels: [__name__]
+        action: drop
+        regex: 'container_spec.*'
+      # 删除没有 pod 的 cgroup 指标。
+      - sourceLabels: [id, pod]
+        action: drop
+        regex: '.+;'
+    # - sourceLabels: [__name__, image]
+    #   separator: ;
+    #   regex: container_([a-z_]+);
+    #   replacement: $1
+    #   action: drop
+    # - sourceLabels: [__name__]
+    #   separator: ;
+    #   regex: container_(network_tcp_usage_total|network_udp_usage_total|tasks_state|cpu_load_average_10s)
+    #   replacement: $1
+    #   action: drop
+
+    ## 应用于抓取后、摄取前样本的 MetricRelabelConfigs。
+    ## 参考: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#relabelconfig
+    ##
+    probesMetricRelabelings: []
+    # - sourceLabels: [__name__, image]
+    #   separator: ;
+    #   regex: container_([a-z_]+);
+    #   replacement: $1
+    #   action: drop
+    # - sourceLabels: [__name__]
+    #   separator: ;
+    #   regex: container_(network_tcp_usage_total|network_udp_usage_total|tasks_state|cpu_load_average_10s)
+    #   replacement: $1
+    #   action: drop
+
+    ## 应用于抓取前样本的 RelabelConfigs
+    ## 参考: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#relabelconfig
+    ##
+    ## metrics_path 需要匹配上游规则和图表
+    cAdvisorRelabelings:
+      - action: replace
+        sourceLabels: [__metrics_path__]
+        targetLabel: metrics_path
+    # - sourceLabels: [__meta_kubernetes_pod_node_name]
+    #   separator: ;
+    #   regex: ^(.*)$
+    #   targetLabel: nodename
+    #   replacement: $1
+    #   action: replace
+
+    ## 应用于抓取前样本的 RelabelConfigs
+    ## 参考: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#relabelconfig
+    ##
+    probesRelabelings:
+      - action: replace
+        sourceLabels: [__metrics_path__]
+        targetLabel: metrics_path
+    # - sourceLabels: [__meta_kubernetes_pod_node_name]
+    #   separator: ;
+    #   regex: ^(.*)$
+    #   targetLabel: nodename
+    #   replacement: $1
+    #   action: replace
+
+    ## 应用于抓取前样本的 RelabelConfigs
+    ## 参考: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#relabelconfig
+    ##
+    resourceRelabelings:
+      - action: replace
+        sourceLabels: [__metrics_path__]
+        targetLabel: metrics_path
+    # - sourceLabels: [__meta_kubernetes_pod_node_name]
+    #   separator: ;
+    #   regex: ^(.*)$
+    #   targetLabel: nodename
+    #   replacement: $1
+    #   action: replace
+
+    ## 应用于抓取后、摄取前样本的 MetricRelabelConfigs。
+    ## 参考: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#relabelconfig
+    ##
+    metricRelabelings:
+      # 减少 kubelet 存储操作的 bucket 基数。
+      - action: drop
+        sourceLabels: [__name__, le]
+        regex: (csi_operations|storage_operation_duration)_seconds_bucket;(0.25|2.5|15|25|120|600)(\.0)?
+    # - sourceLabels: [__name__, image]
+    #   separator: ;
+    #   regex: container_([a-z_]+);
+    #   replacement: $1
+    #   action: drop
+    # - sourceLabels: [__name__]
+    #   separator: ;
+    #   regex: container_(network_tcp_usage_total|network_udp_usage_total|tasks_state|cpu_load_average_10s)
+    #   replacement: $1
+    #   action: drop
+
+    ## 应用于抓取前样本的 RelabelConfigs
+    ## 参考: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#relabelconfig
+    ##
+    ## metrics_path 需要匹配上游规则和图表
+    relabelings:
+      - action: replace
+        sourceLabels: [__metrics_path__]
+        targetLabel: metrics_path
+    # - sourceLabels: [__meta_kubernetes_pod_node_name]
+    #   separator: ;
+    #   regex: ^(.*)$
+    #   targetLabel: nodename
+    #   replacement: $1
+    #   action: replace
+
+    ## 附加标签
+    ##
+    additionalLabels: {}
+    #  foo: bar
+
+    ## 定义从关联的 Kubernetes Service 对象转移到摄取指标上的标签。
+    ## https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#servicemonitor
+    targetLabels: []
+
+## 抓取 kube controller manager 的组件
+##
+kubeControllerManager:
+  enabled: true
+
+  ## 如果您的 kube controller manager 不是作为 pod 部署的，请指定可以找到它的 IP
+  ##
+  endpoints: []
+  # - 10.141.4.22
+  # - 10.141.4.23
+  # - 10.141.4.24
+
+  ## 如果使用 kubeControllerManager.endpoints，则仅使用 port 和 targetPort
+  ##
+  service:
+    enabled: true
+    ## 如果为 null 或未设置，该值将根据目标 Kubernetes 版本动态确定，因为 Kubernetes 1.22 中的默认端口发生了变化。
+    ##
+    port: null
+    targetPort: null
+    ipDualStack:
+      enabled: false
+      ipFamilies: ["IPv6", "IPv4"]
+      ipFamilyPolicy: "PreferDualStack"
+    # selector:
+    #   component: kube-controller-manager
+
+  serviceMonitor:
+    enabled: true
+    ## 抓取间隔。如果未设置，则使用 Prometheus 默认抓取间隔。
+    ##
+    interval: ""
+
+    ## SampleLimit 定义每个抓取接受的抓取样本数量限制。
+    ##
+    sampleLimit: 0
+
+    ## TargetLimit 定义接受的抓取目标数量限制。
+    ##
+    targetLimit: 0
+
+    ## 每个抓取接受的样本标签数量限制。仅在 Prometheus 2.27.0 及更高版本中有效。
+    ##
+    labelLimit: 0
+
+    ## 每个抓取接受的样本标签名称长度限制。仅在 Prometheus 2.27.0 及更高版本中有效。
+    ##
+    labelNameLengthLimit: 0
+
+    ## 每个抓取接受的样本标签值长度限制。仅在 Prometheus 2.27.0 及更高版本中有效。
+    ##
+    labelValueLengthLimit: 0
+
+    ## proxyUrl: 应用于抓取的代理 URL。
+    ##
+    proxyUrl: ""
+
+    ## port: 将从中抓取指标的端口名称
+    ##
+    port: http-metrics
+
+    jobLabel: jobLabel
+    selector: {}
+    #  matchLabels:
+    #    component: kube-controller-manager
+
+    ## 启用通过 https 抓取 kube-controller-manager。
+    ## 需要正确的证书（非自签名）和委托的身份验证/授权检查。
+    ## 如果为 null 或未设置，该值将根据目标 Kubernetes 版本动态确定。
+    ##
+    https: null
+
+    # 抓取时跳过 TLS 证书验证
+    insecureSkipVerify: null
+
+    # 验证 TLS 证书时要使用的服务器名称
+    serverName: null
+
+    ## 应用于抓取后、摄取前样本的 MetricRelabelConfigs。
+    ## 参考: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#relabelconfig
+    ##
+    metricRelabelings: []
+    # - action: keep
+    #   regex: 'kube_(daemonset|deployment|pod|namespace|node|statefulset).+'
+    #   sourceLabels: [__name__]
+
+    ## 应用于抓取前样本的 RelabelConfigs
+    ## 参考: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#relabelconfig
+    ##
+    relabelings: []
+    # - sourceLabels: [__meta_kubernetes_pod_node_name]
+    #   separator: ;
+    #   regex: ^(.*)$
+    #   targetLabel: nodename
+    #   replacement: $1
+    #   action: replace
+
+    ## 附加标签
+    ##
+    additionalLabels: {}
+    #  foo: bar
+
+    ## 定义从关联的 Kubernetes Service 对象转移到摄取指标上的标签。
+    ## https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#servicemonitor
+    targetLabels: []
+
+## 抓取 coreDns 的组件。使用这个或 kubeDns
+##
+coreDns:
+  enabled: true
+  service:
+    enabled: true
+    port: 9153
+    targetPort: 9153
+
+    ipDualStack:
+      enabled: false
+      ipFamilies: ["IPv6", "IPv4"]
+      ipFamilyPolicy: "PreferDualStack"
+    # selector:
+    #   k8s-app: kube-dns
+  serviceMonitor:
+    enabled: true
+    ## 抓取间隔。如果未设置，则使用 Prometheus 默认抓取间隔。
+    ##
+    interval: ""
+
+    ## SampleLimit 定义每个抓取接受的抓取样本数量限制。
+    ##
+    sampleLimit: 0
+
+    ## TargetLimit 定义接受的抓取目标数量限制。
+    ##
+    targetLimit: 0
+
+    ## 每个抓取接受的样本标签数量限制。仅在 Prometheus 2.27.0 及更高版本中有效。
+    ##
+    labelLimit: 0
+
+    ## 每个抓取接受的样本标签名称长度限制。仅在 Prometheus 2.27.0 及更高版本中有效。
+    ##
+    labelNameLengthLimit: 0
+
+    ## 每个抓取接受的样本标签值长度限制。仅在 Prometheus 2.27.0 及更高版本中有效。
+    ##
+    labelValueLengthLimit: 0
+
+    ## proxyUrl: 应用于抓取的代理 URL。
+    ##
+    proxyUrl: ""
+
+    ## port: 将从中抓取指标的端口名称
+    ##
+    port: http-metrics
+
+    jobLabel: jobLabel
+    selector: {}
+    #  matchLabels:
+    #    k8s-app: kube-dns
+
+    ## 应用于抓取后、摄取前样本的 MetricRelabelConfigs。
+    ## 参考: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#relabelconfig
+    ##
+    metricRelabelings: []
+    # - action: keep
+    #   regex: 'kube_(daemonset|deployment|pod|namespace|node|statefulset).+'
+    #   sourceLabels: [__name__]
+
+    ## 应用于抓取前样本的 RelabelConfigs
+    ## 参考: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#relabelconfig
+    ##
+    relabelings: []
+    # - sourceLabels: [__meta_kubernetes_pod_node_name]
+    #   separator: ;
+    #   regex: ^(.*)$
+    #   targetLabel: nodename
+    #   replacement: $1
+    #   action: replace
+
+    ## 附加标签
+    ##
+    additionalLabels: {}
+    #  foo: bar
+
+    ## 定义从关联的 Kubernetes Service 对象转移到摄取指标上的标签。
+    ## https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#servicemonitor
+    targetLabels: []
+## 抓取 kubeDns 组件。使用这个或 coreDns
+##
+kubeDns:
+  enabled: false
+  service:
+    dnsmasq:
+      port: 10054
+      targetPort: 10054
+    skydns:
+      port: 10055
+      targetPort: 10055
+    ipDualStack:
+      enabled: false
+      ipFamilies: ["IPv6", "IPv4"]
+      ipFamilyPolicy: "PreferDualStack"
+    # selector:
+    #   k8s-app: kube-dns
+  serviceMonitor:
+    ## 抓取间隔。如果未设置，则使用 Prometheus 默认抓取间隔。
+    ##
+    interval: ""
+
+    ## sampleLimit 定义了每个抓取接受的样本数量限制。
+    ##
+    sampleLimit: 0
+
+    ## targetLimit 定义了接受的抓取目标数量限制。
+    ##
+    targetLimit: 0
+
+    ## 每个抓取接受的标签数量限制。仅在 Prometheus 2.27.0 及更高版本中有效。
+    ##
+    labelLimit: 0
+
+    ## 每个抓取接受的标签名称长度限制。仅在 Prometheus 2.27.0 及更高版本中有效。
+    ##
+    labelNameLengthLimit: 0
+
+    ## 每个抓取接受的标签值长度限制。仅在 Prometheus 2.27.0 及更高版本中有效。
+    ##
+    labelValueLengthLimit: 0
+
+    ## proxyUrl: 用于抓取的代理 URL。
+    ##
+    proxyUrl: ""
+
+    jobLabel: jobLabel
+    selector: {}
+    #  matchLabels:
+    #    k8s-app: kube-dns
+
+    ## metricRelabelings：在抓取后、摄取前应用于样本的重贴标签配置。
+    ## ref: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#relabelconfig
+    ##
+    metricRelabelings: []
+    # - action: keep
+    #   regex: 'kube_(daemonset|deployment|pod|namespace|node|statefulset).+'
+    #   sourceLabels: [__name__]
+
+    ## relabelings: 在抓取前应用于样本的重贴标签配置。
+    ## ref: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#relabelconfig
+    ##
+    relabelings: []
+    # - sourceLabels: [__meta_kubernetes_pod_node_name]
+    #   separator: ;
+    #   regex: ^(.*)$
+    #   targetLabel: nodename
+    #   replacement: $1
+    #   action: replace
+
+    ## metricRelabelings：在抓取后、摄取前应用于样本的重贴标签配置。
+    ## ref: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#relabelconfig
+    ##
+    dnsmasqMetricRelabelings: []
+    # - action: keep
+    #   regex: 'kube_(daemonset|deployment|pod|namespace|node|statefulset).+'
+    #   sourceLabels: [__name__]
+
+    ## relabelings: 在抓取前应用于样本的重贴标签配置。
+    ## ref: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#relabelconfig
+    ##
+    dnsmasqRelabelings: []
+    # - sourceLabels: [__meta_kubernetes_pod_node_name]
+    #   separator: ;
+    #   regex: ^(.*)$
+    #   targetLabel: nodename
+    #   replacement: $1
+    #   action: replace
+
+    ## 附加标签
+    ##
+    additionalLabels: {}
+    #  foo: bar
+
+    ## 定义从关联的 Kubernetes Service 对象转移到摄取指标上的标签。
+    ## https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#servicemonitor
+    targetLabels: []
+
+## 抓取 etcd 组件
+##
+kubeEtcd:
+  enabled: true
+
+  ## 如果 etcd 未作为 Pod 部署，请指定其 IP 地址
+  ##
+  endpoints: []
+  # - 10.141.4.22
+  # - 10.141.4.23
+  # - 10.141.4.24
+
+  ## Etcd 服务。如果使用 kubeEtcd.endpoints，则仅使用 port 和 targetPort。
+  ##
+  service:
+    enabled: true
+    port: 2381
+    targetPort: 2381
+    ipDualStack:
+      enabled: false
+      ipFamilies: ["IPv6", "IPv4"]
+      ipFamilyPolicy: "PreferDualStack"
+    # selector:
+    #   component: etcd
+
+  ## 通过将 Secret 加载到 Prometheus 并指定以下安全配置，配置对 etcd 集群的安全访问。
+  ## 例如，使用名为 etcd-client-cert 的 Secret
+  ##
+  ## serviceMonitor:
+  ##   scheme: https
+  ##   insecureSkipVerify: false
+  ##   serverName: localhost
+  ##   caFile: /etc/prometheus/secrets/etcd-client-cert/etcd-ca
+  ##   certFile: /etc/prometheus/secrets/etcd-client-cert/etcd-client
+  ##   keyFile: /etc/prometheus/secrets/etcd-client-cert/etcd-client-key
+  ##
+  serviceMonitor:
+    enabled: true
+    ## 抓取间隔。如果未设置，则使用 Prometheus 默认抓取间隔。
+    ##
+    interval: ""
+
+    ## sampleLimit 定义了每个抓取接受的样本数量限制。
+    ##
+    sampleLimit: 0
+
+    ## targetLimit 定义了接受的抓取目标数量限制。
+    ##
+    targetLimit: 0
+
+    ## 每个抓取接受的标签数量限制。仅在 Prometheus 2.27.0 及更高版本中有效。
+    ##
+    labelLimit: 0
+
+    ## 每个抓取接受的标签名称长度限制。仅在 Prometheus 2.27.0 及更高版本中有效。
+    ##
+    labelNameLengthLimit: 0
+
+    ## 每个抓取接受的标签值长度限制。仅在 Prometheus 2.27.0 及更高版本中有效。
+    ##
+    labelValueLengthLimit: 0
+
+    ## proxyUrl: 用于抓取的代理 URL。
+    ##
+    proxyUrl: ""
+    scheme: http
+    insecureSkipVerify: false
+    serverName: ""
+    caFile: ""
+    certFile: ""
+    keyFile: ""
+
+    ## port: 抓取指标的端口名称
+    ##
+    port: http-metrics
+
+    jobLabel: jobLabel
+    selector: {}
+    #  matchLabels:
+    #    component: etcd
+
+    ## metricRelabelings：在抓取后、摄取前应用于样本的重贴标签配置。
+    ## ref: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#relabelconfig
+    ##
+    metricRelabelings: []
+    # - action: keep
+    #   regex: 'kube_(daemonset|deployment|pod|namespace|node|statefulset).+'
+    #   sourceLabels: [__name__]
+
+    ## relabelings: 在抓取前应用于样本的重贴标签配置。
+    ## ref: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#relabelconfig
+    ##
+    relabelings: []
+    # - sourceLabels: [__meta_kubernetes_pod_node_name]
+    #   separator: ;
+    #   regex: ^(.*)$
+    #   targetLabel: nodename
+    #   replacement: $1
+    #   action: replace
+
+    ## 附加标签
+    ##
+    additionalLabels: {}
+    #  foo: bar
+
+    ## 定义从关联的 Kubernetes Service 对象转移到摄取指标上的标签。
+    ## https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#servicemonitor
+    targetLabels: []
+
+## 抓取 kube-scheduler 组件
+##
+kubeScheduler:
+  enabled: true
+
+  ## 如果 kube-scheduler 未作为 Pod 部署，请指定其 IP 地址
+  ##
+  endpoints: []
+  # - 10.141.4.22
+  # - 10.141.4.23
+  # - 10.141.4.24
+
+  ## 如果使用 kubeScheduler.endpoints，则仅使用 port 和 targetPort。
+  ##
+  service:
+    enabled: true
+    ## 如果为 null 或未设置，则根据目标 Kubernetes 版本动态确定值，因为 Kubernetes 1.23 中默认端口已更改。
+    ##
+    port: null
+    targetPort: null
+    ipDualStack:
+      enabled: false
+      ipFamilies: ["IPv6", "IPv4"]
+      ipFamilyPolicy: "PreferDualStack"
+    # selector:
+    #   component: kube-scheduler
+
+  serviceMonitor:
+    enabled: true
+    ## 抓取间隔。如果未设置，则使用 Prometheus 默认抓取间隔。
+    ##
+    interval: ""
+
+    ## sampleLimit 定义了每个抓取接受的样本数量限制。
+    ##
+    sampleLimit: 0
+
+    ## targetLimit 定义了接受的抓取目标数量限制。
+    ##
+    targetLimit: 0
+
+    ## 每个抓取接受的标签数量限制。仅在 Prometheus 2.27.0 及更高版本中有效。
+    ##
+    labelLimit: 0
+
+    ## 每个抓取接受的标签名称长度限制。仅在 Prometheus 2.27.0 及更高版本中有效。
+    ##
+    labelNameLengthLimit: 0
+
+    ## 每个抓取接受的标签值长度限制。仅在 Prometheus 2.27.0 及更高版本中有效。
+    ##
+    labelValueLengthLimit: 0
+
+    ## proxyUrl: 用于抓取的代理 URL。
+    ##
+    proxyUrl: ""
+    ## 通过 https 启用对 kube-scheduler 的抓取。
+    ## 需要正确的证书（非自签名）和委托的身份验证/授权检查。
+    ## 如果为 null 或未设置，则根据目标 Kubernetes 版本动态确定值。
+    ##
+    https: null
+
+    ## port: 抓取指标的端口名称
+    ##
+    port: http-metrics
+
+    jobLabel: jobLabel
+    selector: {}
+    #  matchLabels:
+    #    component: kube-scheduler
+
+    ## 抓取时跳过 TLS 证书验证
+    insecureSkipVerify: null
+
+    ## 验证 TLS 证书时使用的服务器名称
+    serverName: null
+
+    ## metricRelabelings：在抓取后、摄取前应用于样本的重贴标签配置。
+    ## ref: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#relabelconfig
+    ##
+    metricRelabelings: []
+    # - action: keep
+    #   regex: 'kube_(daemonset|deployment|pod|namespace|node|statefulset).+'
+    #   sourceLabels: [__name__]
+
+    ## relabelings: 在抓取前应用于样本的重贴标签配置。
+    ## ref: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#relabelconfig
+    ##
+    relabelings: []
+    # - sourceLabels: [__meta_kubernetes_pod_node_name]
+    #   separator: ;
+    #   regex: ^(.*)$
+    #   targetLabel: nodename
+    #   replacement: $1
+    #   action: replace
+
+    ## 附加标签
+    ##
+    additionalLabels: {}
+    #  foo: bar
+
+    ## 定义从关联的 Kubernetes Service 对象转移到摄取指标上的标签。
+    ## https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#servicemonitor
+    targetLabels: []
+
+## 抓取 kube-proxy 组件
+##
+kubeProxy:
+  enabled: true
+
+  ## 如果 kube-proxy 未作为 Pod 部署，请指定其 IP 地址
+  ##
+  endpoints: []
+  # - 10.141.4.22
+  # - 10.141.4.23
+  # - 10.141.4.24
+
+  service:
+    enabled: true
+    port: 10249
+    targetPort: 10249
+    ipDualStack:
+      enabled: false
+      ipFamilies: ["IPv6", "IPv4"]
+      ipFamilyPolicy: "PreferDualStack"
+    # selector:
+    #   k8s-app: kube-proxy
+
+  serviceMonitor:
+    enabled: true
+    ## 抓取间隔。如果未设置，则使用 Prometheus 默认抓取间隔。
+    ##
+    interval: ""
+
+    ## sampleLimit 定义了每个抓取接受的样本数量限制。
+    ##
+    sampleLimit: 0
+
+    ## targetLimit 定义了接受的抓取目标数量限制。
+    ##
+    targetLimit: 0
+
+    ## 每个抓取接受的标签数量限制。仅在 Prometheus 2.27.0 及更高版本中有效。
+    ##
+    labelLimit: 0
+
+    ## 每个抓取接受的标签名称长度限制。仅在 Prometheus 2.27.0 及更高版本中有效。
+    ##
+    labelNameLengthLimit: 0
+
+    ## 每个抓取接受的标签值长度限制。仅在 Prometheus 2.27.0 及更高版本中有效。
+    ##
+    labelValueLengthLimit: 0
+
+    ## proxyUrl: 用于抓取的代理 URL。
+    ##
+    proxyUrl: ""
+
+    ## port: 抓取指标的端口名称
+    ##
+    port: http-metrics
+
+    jobLabel: jobLabel
+    selector: {}
+    #  matchLabels:
+    #    k8s-app: kube-proxy
+
+    ## 通过 https 启用对 kube-proxy 的抓取。
+    ## 需要正确的证书（非自签名）和委托的身份验证/授权检查
+    ##
+    https: false
+
+    ## metricRelabelings：在抓取后、摄取前应用于样本的重贴标签配置。
+    ## ref: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#relabelconfig
+    ##
+    metricRelabelings: []
+    # - action: keep
+    #   regex: 'kube_(daemonset|deployment|pod|namespace|node|statefulset).+'
+    #   sourceLabels: [__name__]
+
+    ## relabelings: 在抓取前应用于样本的重贴标签配置。
+    ## ref: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#relabelconfig
+    ##
+    relabelings: []
+    # - action: keep
+    #   regex: 'kube_(daemonset|deployment|pod|namespace|node|statefulset).+'
+    #   sourceLabels: [__name__]
+
+    ## 附加标签
+    ##
+    additionalLabels: {}
+    #  foo: bar
+
+    ## 定义从关联的 Kubernetes Service 对象转移到摄取指标上的标签。
+    ## https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#servicemonitor
+    targetLabels: []
+
+## 抓取 kube state metrics 组件
+##
+kubeStateMetrics:
+  enabled: true
+
+## kube-state-metrics 子图配置
+##
+kube-state-metrics:
+  namespaceOverride: ""
+  rbac:
+    create: true
+  releaseLabel: true
+
+  ## 通过 kubernetes-service-endpoints 启用抓取
+  ## 默认禁用，因为 Service Monitor 在下面启用
+  ##
+  prometheusScrape: false
+
+  prometheus:
+    monitor:
+
+      ## 通过 Service Monitor 启用抓取
+      ## 如果在上面启用了 prometheusScrape，则禁用以防止重复
+      ##
+      enabled: true
+
+      ## 抓取间隔。如果未设置，则使用 Prometheus 默认抓取间隔。
+      ##
+      interval: ""
+
+      ## sampleLimit 定义了每个抓取接受的样本数量限制。
+      ##
+      sampleLimit: 0
+
+      ## targetLimit 定义了接受的抓取目标数量限制。
+      ##
+      targetLimit: 0
+
+      ## 每个抓取接受的标签数量限制。仅在 Prometheus 2.27.0 及更高版本中有效。
+      ##
+      labelLimit: 0
+
+      ## 每个抓取接受的标签名称长度限制。仅在 Prometheus 2.27.0 及更高版本中有效。
+      ##
+      labelNameLengthLimit: 0
+
+      ## 每个抓取接受的标签值长度限制。仅在 Prometheus 2.27.0 及更高版本中有效。
+      ##
+      labelValueLengthLimit: 0
+
+      ## 抓取超时。如果未设置，则使用 Prometheus 默认抓取超时。
+      ##
+      scrapeTimeout: ""
+
+      ## proxyUrl: 用于抓取的代理 URL。
+      ##
+      proxyUrl: ""
+
+      # 保留抓取数据的标签，覆盖服务器端标签
+      ##
+      honorLabels: true
+
+      ## metricRelabelings：在抓取后、摄取前应用于样本的重贴标签配置。
+      ## ref: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#relabelconfig
+      ##
+      metricRelabelings: []
+      # - action: keep
+      #   regex: 'kube_(daemonset|deployment|pod|namespace|node|statefulset).+'
+      #   sourceLabels: [__name__]
+
+      ## relabelings: 在抓取前应用于样本的重贴标签配置。
+      ## ref: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#relabelconfig
+      ##
+      relabelings: []
+      # - sourceLabels: [__meta_kubernetes_pod_node_name]
+      #   separator: ;
+      #   regex: ^(.*)$
+      #   targetLabel: nodename
+      #   replacement: $1
+      #   action: replace
+
+  selfMonitor:
+    enabled: false
+
+## 将 node exporter 部署为 Daemonset 到所有节点
+##
+nodeExporter:
+  enabled: true
+  operatingSystems:
+    linux:
+      enabled: true
+    aix:
+      enabled: true
+    darwin:
+      enabled: true
+
+  ## forceDeployDashboard 即使禁用了 nodeExporter 部署，也创建仪表板 ConfigMap
+  ##
+  forceDeployDashboards: false
+
+## prometheus-node-exporter 子图配置
+##
+prometheus-node-exporter:
+  namespaceOverride: ""
+  podLabels:
+    ## 添加 'node-exporter' 标签，供 ServiceMonitor 在规则和 Grafana 仪表板中匹配标准用法
+    ##
+    jobLabel: node-exporter
+  releaseLabel: true
+  extraArgs:
+    - --collector.filesystem.mount-points-exclude=^/(dev|proc|sys|var/lib/docker/.+|var/lib/kubelet/.+)($|/)
+    - --collector.filesystem.fs-types-exclude=^(autofs|binfmt_misc|bpf|cgroup2?|configfs|debugfs|devpts|devtmpfs|fusectl|hugetlbfs|iso9660|mqueue|nsfs|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|selinuxfs|squashfs|sysfs|tracefs|erofs)$
+  service:
+    portName: http-metrics
+    ipDualStack:
+      enabled: false
+      ipFamilies: ["IPv6", "IPv4"]
+      ipFamilyPolicy: "PreferDualStack"
+    labels:
+      jobLabel: node-exporter
+
+  prometheus:
+    monitor:
+      enabled: true
+
+      jobLabel: jobLabel
+
+      ## 抓取间隔。如果未设置，则使用 Prometheus 默认抓取间隔。
+      ##
+      interval: ""
+
+      ## sampleLimit 定义了每个抓取接受的样本数量限制。
+      ##
+      sampleLimit: 0
+
+      ## targetLimit 定义了接受的抓取目标数量限制。
+      ##
+      targetLimit: 0
+
+      ## 每个抓取接受的标签数量限制。仅在 Prometheus 2.27.0 及更高版本中有效。
+      ##
+      labelLimit: 0
+
+      ## 每个抓取接受的标签名称长度限制。仅在 Prometheus 2.27.0 及更高版本中有效。
+      ##
+      labelNameLengthLimit: 0
+
+      ## 每个抓取接受的标签值长度限制。仅在 Prometheus 2.27.0 及更高版本中有效。
+      ##
+      labelValueLengthLimit: 0
+
+      ## 抓取请求超时时长。如果未设置，则使用 Prometheus 默认抓取超时。
+      ##
+      scrapeTimeout: ""
+
+      ## proxyUrl: 用于抓取的代理 URL。
+      ##
+      proxyUrl: ""
+
+      ## metricRelabelings：在抓取后、摄取前应用于样本的重贴标签配置。
+      ## ref: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#relabelconfig
+      ##
+      metricRelabelings: []
+      # - sourceLabels: [__name__]
+      #   separator: ;
+      #   regex: ^node_mountstats_nfs_(event|operations|transport)_.+
+      #   replacement: $1
+      #   action: drop
+
+      ## relabelings: 在抓取前应用于样本的重贴标签配置。
+      ## ref: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#relabelconfig
+      ##
+      relabelings: []
+      # - sourceLabels: [__meta_kubernetes_pod_node_name]
+      #   separator: ;
+      #   regex: ^(.*)$
+      #   targetLabel: nodename
+      #   replacement: $1
+      #   action: replace
+
+      ## 将节点元数据附加到发现的目标。需要 Prometheus v2.35.0 及以上版本。
+      ##
+      # attachMetadata:
+      #   node: false
+
+  rbac:
+    ## 如果为 true，则为 node-exporter 创建 PSP
+    ##
+    pspEnabled: false
+
+    
+
+## 管理 Prometheus 和 Alertmanager 组件
+##
+prometheusOperator:
+  enabled: true
+
+  ## 默认使用 '{{ template "kube-prometheus-stack.fullname" . }}-operator'
+  fullnameOverride: ""
+
+  ## 要保留的旧 ReplicaSet 数量
+  ## 默认值为 10，0 将垃圾回收旧 ReplicaSet
+  revisionHistoryLimit: 10
+
+  ## 部署策略
+  ##
+  strategy: {}
+
+  ## Prometheus-Operator v0.39.0 及更高版本原生支持 TLS。
+  ##
+  tls:
+    enabled: true
+    # 值必须与 https://pkg.go.dev/crypto/tls#pkg-constants 中的版本名称匹配
+    tlsMinVersion: VersionTLS13
+    # 默认的 webhook 端口为 10250，以便在 GKE 私有集群中即开即用，并避免添加防火墙规则。
+    internalPort: 10250
+
+  ## Prometheus Operator 部署的活跃度探测
+  ##
+  livenessProbe:
+    enabled: true
+    failureThreshold: 3
+    initialDelaySeconds: 0
+    periodSeconds: 10
+    successThreshold: 1
+    timeoutSeconds: 1
+  ## Prometheus Operator 部署的就绪性探测
+  ##
+  readinessProbe:
+    enabled: true
+    failureThreshold: 3
+    initialDelaySeconds: 0
+    periodSeconds: 10
+    successThreshold: 1
+    timeoutSeconds: 1
+
+  ## Prometheus Operator 0.30 中添加的对 PrometheusRule 资源的 Admission Webhook 支持，可以防止格式不正确的规则进入 Prometheus 并可能导致容器无法启动
+  admissionWebhooks:
+    ## 有效值：Fail, Ignore, IgnoreOnInstallOnly
+    ## IgnoreOnInstallOnly - 如果 Release.IsInstall 返回 "true"，则设置为 "Ignore"，否则为 "Fail"
+    failurePolicy: ""
+    ## 默认 timeoutSeconds 为 10，最大值为 30。
+    timeoutSeconds: 10
+    enabled: true
+    ## PEM 编码的 CA 捆绑包，将用于验证 webhook 的服务器证书。
+    ## 如果未指定，则使用 apiserver 上的系统信任根。
+    caBundle: ""
+    ## 如果启用，则生成自签名证书，然后使用生成的数据修补 webhook 配置。
+    ## 在图表升级时（或如果 Secret 存在），证书将不会重新生成。如果你愿意，可以使用此功能提前提供自己的证书。
+    ##
+    annotations: {}
+    #   argocd.argoproj.io/hook: PreSync
+    #   argocd.argoproj.io/hook-delete-policy: HookSucceeded
+
+    namespaceSelector: {}
+    objectSelector: {}
+    matchConditions: {}
+
+    mutatingWebhookConfiguration:
+      annotations: {}
+      #   argocd.argoproj.io/hook: PreSync
+
+    validatingWebhookConfiguration:
+      annotations: {}
+      #   argocd.argoproj.io/hook: PreSync
+
+    deployment:
+      enabled: false
+
+      ## 副本数
+      ##
+      replicas: 1
+
+      ## 部署策略
+      ##
+      strategy: {}
+
+      # Ref: https://kubernetes.io/docs/tasks/run-application/configure-pdb/
+      podDisruptionBudget:
+        enabled: false
+        minAvailable: 1
+        # maxUnavailable: ""
+        unhealthyPodEvictionPolicy: AlwaysAllow
+
+      ## 要保留的旧 ReplicaSet 数量
+      ## 默认值为 10，0 将垃圾回收旧 ReplicaSet
+      revisionHistoryLimit: 10
+
+      ## Prometheus-Operator v0.39.0 及更高版本原生支持 TLS。
+      ##
+      tls:
+        enabled: true
+        # 值必须与 https://pkg.go.dev/crypto/tls#pkg-constants 中的版本名称匹配
+        tlsMinVersion: VersionTLS13
+        # 默认的 webhook 端口为 10250，以便在 GKE 私有集群中即开即用，并避免添加防火墙规则。
+        internalPort: 10250
+
+      ## Prometheus Operator Webhook 使用的服务帐户。
+      ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/
+      ##
+      serviceAccount:
+        annotations: {}
+        automountServiceAccountToken: false
+        create: true
+        name: ""
+
+      ## Prometheus Operator Webhook 服务的配置
+      ##
+      service:
+        annotations: {}
+        labels: {}
+        clusterIP: ""
+        ipDualStack:
+          enabled: false
+          ipFamilies: ["IPv6", "IPv4"]
+          ipFamilyPolicy: "PreferDualStack"
+
+        ## 在每个节点上公开的端口
+        ## 仅在 service.type 为 'NodePort' 时使用
+        ##
+        nodePort: 31080
+
+        nodePortTls: 31443
+
+        ## 为 Prometheus Operator Webhook 服务打开的附加端口
+        ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#multi-port-services
+        ##
+        additionalPorts: []
+
+        ## 负载均衡器 IP
+        ## 仅在 service.type 为 "LoadBalancer" 时使用
+        ##
+        loadBalancerIP: ""
+        loadBalancerSourceRanges: []
+
+        ## 指示此服务是否希望将外部流量路由到节点本地或集群范围的端点
+        ##
+        externalTrafficPolicy: Cluster
+
+        ## 服务类型
+        ## NodePort, ClusterIP, LoadBalancer
+        ##
+        type: ClusterIP
+
+        ## Prometheus 服务器服务可用的 IP 地址列表
+        ## Ref: https://kubernetes.io/docs/concepts/services-networking/service/#external-ips
+        ##
+        externalIPs: []
+
+      # ## 要添加到操作符 webhook 部署的标签
+      # ##
+      labels: {}
+
+      ## 要添加到操作符 webhook 部署的注解
+      ##
+      annotations: {}
+
+      ## 要添加到操作符 webhook pod 的标签
+      ##
+      podLabels: {}
+
+      ## 要添加到操作符 webhook pod 的注解
+      ##
+      podAnnotations: {}
+
+      ## 如果设置，为 Pod 分配 PriorityClassName
+      # priorityClassName: ""
+
+      ## 定义日志格式
+      # 使用 logfmt (默认) 或 json 日志记录
+      # logFormat: logfmt
+
+      ## 将日志详细程度降低到仅错误
+      # logLevel: error
+
+
+      ## Prometheus-operator webhook 镜像
+      ##
+      image:
+        registry: swr.cn-north-4.myhuaweicloud.com/ddn-k8s/quay.io
+        repository: prometheus-operator/admission-webhook
+        # 如果未设置，则使用 Chart.yaml 中的 appVersion 字段
+        tag: ""
+        sha: ""
+        pullPolicy: IfNotPresent
+
+      ## 定义日志格式
+      # 使用 logfmt (默认) 或 json 日志记录
+      # logFormat: logfmt
+
+      ## 将日志详细程度降低到仅错误
+      # logLevel: error
+
+
+      ## 活跃度探测
+      ##
+      livenessProbe:
+        enabled: true
+        failureThreshold: 3
+        initialDelaySeconds: 30
+        periodSeconds: 10
+        successThreshold: 1
+        timeoutSeconds: 1
+
+      ## 就绪性探测
+      ##
+      readinessProbe:
+        enabled: true
+        failureThreshold: 3
+        initialDelaySeconds: 5
+        periodSeconds: 10
+        successThreshold: 1
+        timeoutSeconds: 1
+
+      ## 资源限制和请求
+      ##
+      resources: {}
+      # limits:
+      #   cpu: 200m
+      #   memory: 200Mi
+      # requests:
+      #   cpu: 100m
+      #   memory: 100Mi
+
+      # 对于使用自定义 CNI（如 calico）的托管 Kubernetes 集群（如 AWS EKS）是必需的，
+      # 因为 AWS 管理的控制平面无法与 Pod 的 IP CIDR 通信，并且 Admission Webhook 无法工作
+      ##
+      hostNetwork: false
+
+      ## 定义 Pod 调度到的节点。
+      ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#nodeselector
+      ##
+      nodeSelector: {}
+
+      ## 用于节点污点的容忍度
+      ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/
+      ##
+      tolerations: []
+      # - key: "key"
+      #   operator: "Equal"
+      #   value: "value"
+      #   effect: "NoSchedule"
+
+      ## 为 Prometheus Operator 分配自定义亲和性规则
+      ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/
+      ##
+      affinity: {}
+        # nodeAffinity:
+        #   requiredDuringSchedulingIgnoredDuringExecution:
+        #     nodeSelectorTerms:
+        #     - matchExpressions:
+        #       - key: kubernetes.io/e2e-az-name
+        #         operator: In
+        #         values:
+        #         - e2e-az1
+      #         - e2e-az2
+      dnsConfig: {}
+        # nameservers:
+        #   - 1.2.3.4
+        # searches:
+        #   - ns1.svc.cluster-domain.example
+        #   - my.dns.search.suffix
+        # options:
+        #   - name: ndots
+        #     value: "2"
+        #   - name: edns0
+      securityContext:
+        fsGroup: 65534
+        runAsGroup: 65534
+        runAsNonRoot: true
+        runAsUser: 65534
+        seccompProfile:
+          type: RuntimeDefault
+
+      ## 容器特定的安全上下文配置
+      ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
+      ##
+      containerSecurityContext:
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: true
+        capabilities:
+          drop:
+            - ALL
+
+      ## 如果为 false，则用户将选择不自动挂载 API 凭据。
+      ##
+      automountServiceAccountToken: true
+
+    patch:
+      enabled: true
+      image:
+        registry: swr.cn-north-4.myhuaweicloud.com/ddn-k8s/registry.k8s.io
+        repository: ingress-nginx/kube-webhook-certgen
+        tag: v1.6.0  # 最新标签: https://github.com/kubernetes/ingress-nginx/blob/main/images/kube-webhook-certgen/TAG
+        sha: ""
+        pullPolicy: IfNotPresent
+      resources: {}
+      ## 为 webhook 修补作业提供一个优先级类名
+      ##
+      priorityClassName: ""
+      ttlSecondsAfterFinished: 60
+      annotations: {}
+      #   argocd.argoproj.io/hook: PreSync
+      #   argocd.argoproj.io/hook-delete-policy: HookSucceeded
+      podAnnotations: {}
+      nodeSelector: {}
+      affinity: {}
+      tolerations: []
+
+      ## SecurityContext 包含 Pod 级别的安全属性和通用容器设置。
+      ## 默认设置为非 root 用户，uid 为 2000，gid 为 2000。*v1.PodSecurityContext false
+      ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
+      ##
+      securityContext:
+        runAsGroup: 2000
+        runAsNonRoot: true
+        runAsUser: 2000
+        seccompProfile:
+          type: RuntimeDefault
+      ## Prometheus Operator Webhook Job Patch 使用的服务帐户。
+      ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/
+      ##
+      serviceAccount:
+        create: true
+        annotations: {}
+        automountServiceAccountToken: true
+
+    # 创建作业容器的安全上下文
+    createSecretJob:
+      securityContext:
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: true
+        capabilities:
+          drop:
+          - ALL
+
+      # 修补 webhook 作业容器的安全上下文
+    patchWebhookJob:
+      securityContext:
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: true
+        capabilities:
+          drop:
+          - ALL
+
+    # 使用 cert-manager 生成 webhook 证书
+    certManager:
+      enabled: false
+      # 自签名根证书
+      rootCert:
+        duration: ""  # 默认 5 年
+        # -- 设置证书上的 revisionHistoryLimit。参见
+        # https://cert-manager.io/docs/reference/api-docs/#cert-manager.io/v1.CertificateSpec
+        # 默认为 nil。
+        revisionHistoryLimit:
+      admissionCert:
+        duration: ""  # 默认 1 年
+        # -- 设置证书上的 revisionHistoryLimit。参见
+        # https://cert-manager.io/docs/reference/api-docs/#cert-manager.io/v1.CertificateSpec
+        # 默认为 nil。
+        revisionHistoryLimit:
+      # issuerRef:
+      #   name: "issuer"
+      #   kind: "ClusterIssuer"
+
+  ## 作用域为 Prometheus Operator 和 apiserver 交互的命名空间（允许列表）。
+  ## 这与 denyNamespaces 互斥。将其设置为空对象将禁用此配置
+  ##
+  namespaces: {}
+    # releaseNamespace: true
+    # additional:
+    # - kube-system
+
+  ## 不作用域为 Prometheus Operator 交互的命名空间（拒绝列表）。
+  ##
+  denyNamespaces: []
+
+  ## 过滤要查找 Prometheus Operator 自定义资源的命名空间
+  ##
+  alertmanagerInstanceNamespaces: []
+  alertmanagerConfigNamespaces: []
+  prometheusInstanceNamespaces: []
+  thanosRulerInstanceNamespaces: []
+
+  ## clusterDomain 值将添加到 alertmanager 的 cluster.peer 选项中。
+  ## 如果未指定此选项，cluster.peer 的值将为 alertmanager-monitoring-alertmanager-0.alertmanager-operated:9094（默认值）
+  ## 如果指定此选项，cluster.peer 的值将为 alertmanager-monitoring-alertmanager-0.alertmanager-operated.namespace.svc.cluster-domain:9094
+  ##
+  # clusterDomain: "cluster.local"
+
+  networkPolicy:
+    ## 启用 NetworkPolicy 资源的创建。
+    ##
+    enabled: false
+
+    ## 要使用的网络策略类型。
+    #  可以是：
+    #  * kubernetes (networking.k8s.io/v1/NetworkPolicy)
+    #  * cilium     (cilium.io/v2/CiliumNetworkPolicy)
+    flavor: kubernetes
+
+    # cilium:
+    #   egress:
+
+    ## 用于选择器的匹配标签
+    # matchLabels: {}
+
+  ## Prometheus Operator 使用的服务帐户。
+  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/
+  ##
+  serviceAccount:
+    create: true
+    name: ""
+    automountServiceAccountToken: true
+    annotations: {}
+
+  # -- 容器生命周期钩子的 terminationGracePeriodSeconds
+  terminationGracePeriodSeconds: 30
+  # -- 指定控制器生命周期钩子
+  lifecycle: {}
+  ## Prometheus Operator 服务的配置
+  ##
+  service:
+    annotations: {}
+    labels: {}
+    clusterIP: ""
+    ipDualStack:
+      enabled: false
+      ipFamilies: ["IPv6", "IPv4"]
+      ipFamilyPolicy: "PreferDualStack"
+
+  ## 在每个节点上公开的端口
+  ## 仅在 service.type 为 'NodePort' 时使用
+  ##
+    nodePort: 30080
+
+    nodePortTls: 30443
+
+  ## 为 Prometheus Operator 服务打开的附加端口
+  ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#multi-port-services
+  ##
+    additionalPorts: []
+
+  ## 负载均衡器 IP
+  ## 仅在 service.type 为 "LoadBalancer" 时使用
+  ##
+    loadBalancerIP: ""
+    loadBalancerSourceRanges: []
+
+    ## 指示此服务是否希望将外部流量路由到节点本地或集群范围的端点
+    ##
+    externalTrafficPolicy: Cluster
+
+  ## 服务类型
+  ## NodePort, ClusterIP, LoadBalancer
+  ##
+    type: ClusterIP
+
+    ## Prometheus 服务器服务可用的 IP 地址列表
+    ## Ref: https://kubernetes.io/docs/concepts/services-networking/service/#external-ips
+    ##
+    externalIPs: []
+
+  # ## 要添加到操作符部署的标签
+  # ##
+  labels: {}
+
+  ## 要添加到操作符部署的注解
+  ##
+  annotations: {}
+
+  ## 要添加到操作符 pod 的标签
+  ##
+  podLabels: {}
+
+  ## 要添加到操作符 pod 的注解
+  ##
+  podAnnotations: {}
+
+  ## 为操作符分配一个 PodDisruptionBudget
+  ##
+  podDisruptionBudget:
+    enabled: false
+    minAvailable: 1
+    # maxUnavailable: ""
+    unhealthyPodEvictionPolicy: AlwaysAllow
+
+  ## 如果设置，为 Pod 分配 PriorityClassName
+  # priorityClassName: ""
+
+  ## 定义日志格式
+  # 使用 logfmt (默认) 或 json 日志记录
+  # logFormat: logfmt
+
+  ## 将日志详细程度降低到仅错误
+  # logLevel: error
+
+  kubeletService:
+    ## 如果为 true，操作符将创建并维护一个用于抓取 kubelet 的服务
+    ## ref: https://github.com/prometheus-operator/prometheus-operator/blob/main/helm/prometheus-operator/README.md
+    ##
+    enabled: true
+    namespace: kube-system
+    selector: ""
+    ## 默认使用 '{{ template "kube-prometheus-stack.fullname" . }}-kubelet'
+    name: ""
+
+  ## 为 kubelet 目标创建 Endpoints 对象。
+  kubeletEndpointsEnabled: true
+  ## 为 kubelet 目标创建 EndpointSlice 对象。
+  kubeletEndpointSliceEnabled: false
+
+  ## 传递给 Prometheus Operator 的额外参数
+  # https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/platform/operator.md
+  extraArgs: []
+  #  - --labels="cluster=talos-cluster"
+
+  ## 为操作符创建一个 ServiceMonitor
+  ##
+  serviceMonitor:
+    ## 如果为 true，则为 prometheus operator 创建一个 ServiceMonitor
+    ##
+    selfMonitor: true
+
+    ## ServiceMonitor 的标签
+    additionalLabels: {}
+
+    ## 抓取间隔。如果未设置，则使用 Prometheus 默认抓取间隔。
+    ##
+    interval: ""
+
+    ## sampleLimit 定义了每个抓取接受的样本数量限制。
+    ##
+    sampleLimit: 0
+
+    ## targetLimit 定义了接受的抓取目标数量限制。
+    ##
+    targetLimit: 0
+
+    ## 每个抓取接受的标签数量限制。仅在 Prometheus 2.27.0 及更高版本中有效。
+    ##
+    labelLimit: 0
+
+    ## 每个抓取接受的标签名称长度限制。仅在 Prometheus 2.27.0 及更高版本中有效。
+    ##
+    labelNameLengthLimit: 0
+
+    ## 每个抓取接受的标签值长度限制。仅在 Prometheus 2.27.0 及更高版本中有效。
+    ##
+    labelValueLengthLimit: 0
+
+    ## 抓取超时。如果未设置，则使用 Prometheus 默认抓取超时。
+    scrapeTimeout: ""
+
+    ## metricRelabelings：在抓取后、摄取前应用于样本的重贴标签配置。
+    ##
+    metricRelabelings: []
+    # - action: keep
+    #   regex: 'kube_(daemonset|deployment|pod|namespace|node|statefulset).+'
+    #   sourceLabels: [__name__]
+
+    #   relabelings: 在抓取后、摄取前应用于样本的重贴标签配置。
+    ##
+    relabelings: []
+    # - sourceLabels: [__meta_kubernetes_pod_node_name]
+    #   separator: ;
+    #   regex: ^(.*)$
+    #   targetLabel: nodename
+    #   replacement: $1
+    #   action: replace
+
+  ## 资源限制和请求
+  ##
+  resources: {}
+  # limits:
+  #   cpu: 200m
+  #   memory: 200Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 100Mi
+
+  ## Operator 环境
+  ##  env:
+  ##    VARIABLE: value
+  env:
+    GOGC: "30"
+
+  # 对于使用自定义 CNI（如 calico）的托管 Kubernetes 集群（如 AWS EKS）是必需的，
+  # 因为 AWS 管理的控制平面无法与 Pod 的 IP CIDR 通信，并且 Admission Webhook 无法工作
+  ##
+  hostNetwork: false
+
+  ## 定义 Pod 调度到的节点。
+  ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#nodeselector
+  ##
+  nodeSelector: {}
+
+  ## 用于节点污点的容忍度
+  ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/
+  ##
+  tolerations: []
+  # - key: "key"
+  #   operator: "Equal"
+  #   value: "value"
+  #   effect: "NoSchedule"
+
+  ## 为 Prometheus Operator 分配自定义亲和性规则
+  ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/
+  ##
+  affinity: {}
+    # nodeAffinity:
+    #   requiredDuringSchedulingIgnoredDuringExecution:
+    #     nodeSelectorTerms:
+    #     - matchExpressions:
+    #       - key: kubernetes.io/e2e-az-name
+    #         operator: In
+    #         values:
+    #         - e2e-az1
+    #         - e2e-az2
+  dnsConfig: {}
+    # nameservers:
+    #   - 1.2.3.4
+    # searches:
+    #   - ns1.svc.cluster-domain.example
+    #   - my.dns.search.suffix
+    # options:
+    #   - name: ndots
+    #     value: "2"
+  #   - name: edns0
+  securityContext:
+    fsGroup: 65534
+    runAsGroup: 65534
+    runAsNonRoot: true
+    runAsUser: 65534
+    seccompProfile:
+      type: RuntimeDefault
+
+  ## 容器特定的安全上下文配置
+  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
+  ##
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop:
+      - ALL
+
+  # 为 prometheus-operator 启用垂直 Pod 自动扩缩器支持
+  verticalPodAutoscaler:
+    enabled: false
+
+    # 负责为对象生成推荐的推荐器。
+    # 列表应为空（此时默认推荐器将生成推荐）
+    # 或包含一个推荐器。
+    # recommenders:
+    # - name: custom-recommender-performance
+
+    # 垂直 Pod 自动扩缩器可以控制的资源列表。默认为 cpu 和 memory
+    controlledResources: []
+    # 指定应控制的资源值：RequestsOnly 或 RequestsAndLimits。
+    # controlledValues: RequestsAndLimits
+
+    # 定义 Pod 允许的最大资源
+    maxAllowed: {}
+    # cpu: 200m
+    # memory: 100Mi
+    # 定义 Pod 允许的最小资源
+    minAllowed: {}
+    # cpu: 200m
+    # memory: 100Mi
+
+    updatePolicy:
+      # 指定 VPA Updater 尝试 Pod 逐出时需要存活的最小副本数
+      # minReplicas: 1
+      # 指定当 Pod 启动时是否应用推荐更新，以及在 Pod 的生命周期内是否应用推荐更新。
+      # 可能的值为 "Off", "Initial", "Recreate" 和 "Auto"。
+      updateMode: Auto
+
+  ## Prometheus-operator 镜像
+  ##
+  image:
+    registry: quay.io
+    repository: prometheus-operator/prometheus-operator
+    # 如果未设置，则使用 Chart.yaml 中的 appVersion 字段
+    tag: ""
+    sha: ""
+    pullPolicy: IfNotPresent
+
+  ## Prometheus Operator 管理的 Prometheus 实例使用的 Prometheus 镜像
+  ##
+  # prometheusDefaultBaseImage: prometheus/prometheus
+
+  ## Prometheus Operator 管理的 Prometheus 实例使用的 Prometheus 镜像注册表
+  ##
+  # prometheusDefaultBaseImageRegistry: quay.io
+
+  ## Prometheus Operator 管理的 Alertmanager 实例使用的 Alertmanager 镜像
+  ##
+  # alertmanagerDefaultBaseImage: prometheus/alertmanager
+
+  ## Prometheus Operator 管理的 Alertmanager 实例使用的 Alertmanager 镜像注册表
+  ##
+  # alertmanagerDefaultBaseImageRegistry: quay.io
+
+  ## Prometheus-config-reloader
+  ##
+  prometheusConfigReloader:
+    image:
+      registry: quay.io
+      repository: prometheus-operator/prometheus-config-reloader
+      # 如果未设置，则使用 Chart.yaml 中的 appVersion 字段
+      tag: ""
+      sha: ""
+
+    # 添加 prometheus-config-reloader 的活跃度和就绪性探测。默认: false
+    enableProbe: false
+
+    # prometheus-config-reloader 的资源配置
+    resources: {}
+      # requests:
+      #   cpu: 200m
+      #   memory: 50Mi
+      # limits:
+      #   cpu: 200m
+      #   memory: 50Mi
+
+  ## Thanos side-car 配置
+  ##
+  thanosImage:
+    registry: swr.cn-north-4.myhuaweicloud.com/ddn-k8s/quay.io
+    repository: thanos/thanos
+    tag: v0.39.1
+    sha: ""
+
+  ## 设置标签选择器以过滤被监视的 prometheus 和 prometheusAgent
+  ##
+  prometheusInstanceSelector: ""
+
+  ## 设置标签选择器以过滤被监视的 alertmanager
+  ##
+  alertmanagerInstanceSelector: ""
+
+  ## 设置标签选择器以过滤被监视的 thanosRuler
+  thanosRulerInstanceSelector: ""
+
+  ## 设置字段选择器以过滤被监视的 secret
+  ##
+  secretFieldSelector: "type!=kubernetes.io/dockercfg,type!=kubernetes.io/service-account-token,type!=helm.sh/release.v1"
+
+  ## 如果为 false，则用户将选择不自动挂载 API 凭据。
+  ##
+  automountServiceAccountToken: true
+
+  ## 附加卷
+  ##
+  extraVolumes: []
+
+  ## 附加卷挂载
+  ##
+  extraVolumeMounts: []
+
+
+## 部署一个 Prometheus 实例
+##
+prometheus:
+  enabled: true
+
+  ## 将 prometheus 切换到代理模式
+  ## 请注意，以下许多功能（例如规则、查询、警报、远程读取、thanos）在代理模式下将无法工作。
+  ## 参考: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/platform/prometheus-agent.md
+  ##
+  agentMode: false
+
+  ## Prometheus 的注解
+  ##
+  annotations: {}
+
+  ## Prometheus 的附加标签
+  ##
+  additionalLabels: {}
+
+  ## 配置 prometheus 的网络策略
+  networkPolicy:
+    enabled: false
+
+    ## 使用的网络策略类型。
+    #  可以是:
+    #  * kubernetes for networking.k8s.io/v1/NetworkPolicy
+    #  * cilium     for cilium.io/v2/CiliumNetworkPolicy
+    flavor: kubernetes
+
+    # cilium:
+    #   endpointSelector:
+    #   egress:
+    #   ingress:
+
+    # egress:
+    # - {}
+    # ingress:
+    # - {}
+    # podSelector:
+    #   matchLabels:
+    #     app: prometheus
+
+  ## Prometheus 使用的服务账户。
+  ## 参考: https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/
+  ##
+  serviceAccount:
+    create: true
+    name: ""
+    annotations: {}
+    automountServiceAccountToken: true
+
+  # 用于 sidecar 上 thanos 服务发现的服务
+  # 启用此项可使 Thanos Query 使用
+  # `--store=dnssrv+_grpc._tcp.${kube-prometheus-stack.fullname}-thanos-discovery.${namespace}.svc.cluster.local` 来发现
+  # prometheus 节点上的 Thanos sidecar
+  # (请记住修改 ${kube-prometheus-stack.fullname} 和 ${namespace}。不要只是复制粘贴！)
+  thanosService:
+    enabled: false
+    annotations: {}
+    labels: {}
+
+    ## 表示此服务是否希望将外部流量路由到节点本地或集群范围的端点
+    ##
+    externalTrafficPolicy: Cluster
+
+    ## 服务类型
+    ##
+    type: ClusterIP
+
+    ## 双栈服务
+    ##
+    ipDualStack:
+      enabled: false
+      ipFamilies: ["IPv6", "IPv4"]
+      ipFamilyPolicy: "PreferDualStack"
+
+    ## gRPC 端口配置
+    portName: grpc
+    port: 10901
+    targetPort: "grpc"
+
+    ## HTTP 端口配置 (用于指标)
+    httpPortName: http
+    httpPort: 10902
+    targetHttpPort: "http"
+
+    ## 要分配的 ClusterIP
+    # 默认是无头服务 ("None")
+    clusterIP: "None"
+
+    ## 如果服务类型是 NodePort，则在每个节点上暴露的端口
+    ##
+    nodePort: 30901
+    httpNodePort: 30902
+
+  # 用于抓取 Sidecar 指标的服务监控
+  # 也需要启用 thanosService
+  thanosServiceMonitor:
+    enabled: false
+    interval: ""
+
+    ## 附加标签
+    ##
+    additionalLabels: {}
+
+    ## scheme: 用于抓取的 HTTP 方案。例如，与 `tlsConfig` 一起使用以支持 istio mTLS。
+    scheme: ""
+
+    ## tlsConfig: 用于抓取端点时使用的 TLS 配置。例如，与 istio mTLS 一起使用。
+    ## 类型: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#tlsconfig
+    tlsConfig: {}
+
+    bearerTokenFile:
+
+    ## 在摄取前应用于样本的指标重新标记配置。
+    metricRelabelings: []
+
+    ## 在摄取前应用于样本的重新标记配置。
+    relabelings: []
+
+  # 用于外部访问 sidecar 的服务
+  # 启用此项会创建一个服务，用于在集群外部暴露 thanos-sidecar。
+  thanosServiceExternal:
+    enabled: false
+    annotations: {}
+    labels: {}
+    loadBalancerIP: ""
+    loadBalancerSourceRanges: []
+
+    ## gRPC 端口配置
+    portName: grpc
+    port: 10901
+    targetPort: "grpc"
+
+    ## HTTP 端口配置 (用于指标)
+    httpPortName: http
+    httpPort: 10902
+    targetHttpPort: "http"
+
+    ## 表示此服务是否希望将外部流量路由到节点本地或集群范围的端点
+    ##
+    externalTrafficPolicy: Cluster
+
+    ## 服务类型
+    ##
+    type: LoadBalancer
+
+    ## 在每个节点上暴露的端口
+    ##
+    nodePort: 30901
+    httpNodePort: 30902
+
+  ## Prometheus 服务配置
+  ##
+  service:
+    enabled: true
+    annotations: {}
+    labels: {}
+    clusterIP: ""
+    ipDualStack:
+      enabled: false
+      ipFamilies: ["IPv6", "IPv4"]
+      ipFamilyPolicy: "PreferDualStack"
+
+    ## Prometheus 服务监听的端口
+    ##
+    port: 9090
+
+    ## 用于代理 extraContainer 端口
+    targetPort: 9090
+
+    ## Prometheus Reloader 监听的端口
+    ##
+    reloaderWebPort: 8080
+
+    ## Prometheus 服务器服务可用的 IP 地址列表
+    ## 参考: https://kubernetes.io/docs/concepts/services-networking/service/#external-ips
+    ##
+    externalIPs: []
+
+    ## 在每个节点上暴露的端口
+    ## 仅在 service.type 为 'NodePort' 时使用
+    ##
+    nodePort: 30003
+
+    ## 负载均衡器 IP
+    ## 仅在 service.type 为 "LoadBalancer" 时使用
+    loadBalancerIP: ""
+    loadBalancerSourceRanges: []
+
+    ## 表示此服务是否希望将外部流量路由到节点本地或集群范围的端点
+    ##
+    externalTrafficPolicy: Cluster
+
+    ## 服务类型
+    ##
+    type: NodePort
+
+    ## Prometheus 服务要打开的附加端口
+    ##
+    additionalPorts: []
+    # additionalPorts:
+    # - name: oauth-proxy
+    #   port: 8081
+    #   targetPort: 8081
+    # - name: oauth-metrics
+    #   port: 8082
+    #   targetPort: 8082
+
+    ## 即使 Pod 本身尚未就绪，所有端点也被视为“就绪”
+    ## 参考: https://kubernetes.io/docs/reference/kubernetes-api/service-resources/service-v1/#ServiceSpec
+    publishNotReadyAddresses: false
+
+    ## 如果你想确保来自特定客户端的连接每次都传递到同一个 Pod
+    ## 接受 'ClientIP' 或 'None'
+    ##
+    sessionAffinity: None
+
+    ## 如果你想修改 ClientIP sessionAffinity 超时
+    ## 如果 ServiceAffinity == "ClientIP"，值必须 >0 且 <=86400（1天）
+    ##
+    sessionAffinityConfig:
+      clientIP:
+        timeoutSeconds: 10800
+
+  ## 为每个有状态集 Prometheus 副本创建单独服务的配置
+  ##
+  servicePerReplica:
+    enabled: false
+    annotations: {}
+
+    ## 每个副本的 Prometheus 服务监听的端口
+    ##
+    port: 9090
+
+    ## 用于代理 extraContainer 端口
+    targetPort: 9090
+
+    ## 在每个节点上暴露的端口
+    ## 仅在 servicePerReplica.type 为 'NodePort' 时使用
+    ##
+    nodePort: 30091
+
+    ## 负载均衡器源 IP 范围
+    ## 仅在 servicePerReplica.type 为 "LoadBalancer" 时使用
+    loadBalancerSourceRanges: []
+
+    ## 表示此服务是否希望将外部流量路由到节点本地或集群范围的端点
+    ##
+    externalTrafficPolicy: Cluster
+
+    ## 服务类型
+    ##
+    type: ClusterIP
+
+    ## 双栈服务
+    ##
+    ipDualStack:
+      enabled: false
+      ipFamilies: ["IPv6", "IPv4"]
+      ipFamilyPolicy: "PreferDualStack"
+
+  ## 为 Prometheus 配置 pod 破坏预算
+  ## 参考: https://kubernetes.io/docs/tasks/run-application/configure-pdb/#specifying-a-poddisruptionbudget
+  ##
+  podDisruptionBudget:
+    enabled: false
+    minAvailable: 1
+    # maxUnavailable: ""
+    unhealthyPodEvictionPolicy: AlwaysAllow
+
+  # Ingress 在集群外部暴露 thanos sidecar
+  thanosIngress:
+    enabled: false
+
+    ingressClassName: ""
+
+    annotations: {}
+    labels: {}
+    servicePort: 10901
+
+    ## 在每个节点上暴露的端口
+    ## 仅在 service.type 为 'NodePort' 时使用
+    ##
+    nodePort: 30901
+
+    ## 如果启用 Ingress，必须提供主机名。
+    ##
+    hosts: []
+      # - thanos-gateway.domain.com
+
+    ## 用于 ingress 规则的路径
+    ##
+    paths: []
+    # - /
+
+    ## 对于 Kubernetes >= 1.18，您应该指定 pathType（决定如何匹配 Ingress 路径）
+    ## 参考 https://kubernetes.io/blog/2020/04/02/improvements-to-the-ingress-api-in-kubernetes-1.18/#better-path-matching-with-path-types
+    # pathType: ImplementationSpecific
+
+    ## Thanos Ingress 的 TLS 配置
+    ## 密钥必须在命名空间中手动创建
+    ##
+    tls: []
+    # - secretName: thanos-gateway-tls
+    #   hosts:
+    #   - thanos-gateway.domain.com
+    #
+
+  ## ExtraSecret 可用于在额外的密钥中存储各种数据
+  ## (例如，用于存储哈希过的基本认证凭据)
+  extraSecret:
+    ## 如果未设置，名称将自动生成
+    # name: ""
+    annotations: {}
+    data: {}
+  #   auth: |
+  #     foo:$apr1$OFG3Xybp$ckL0FHDAkoXYIlH9.cysT0
+  #     someoneelse:$apr1$DMZX2Z4q$6SbQIfyuLQd.xmo/P0m2c.
+
+  ingress:
+    enabled: false
+
+    ingressClassName: ""
+
+    annotations: {}
+    labels: {}
+
+    ## 将 ingress 重定向到服务上定义的附加端口
+    # servicePort: 8081
+
+    ## 主机名。
+    ## 如果启用 Ingress，必须提供。
+    ##
+    # hosts:
+    #   - prometheus.domain.com
+    hosts: []
+
+    ## 用于 ingress 规则的路径 - 一个路径应与 prometheusSpec.routePrefix 匹配
+    ##
+    paths: []
+    # - /
+
+    ## 对于 Kubernetes >= 1.18，您应该指定 pathType（决定如何匹配 Ingress 路径）
+    ## 参考 https://kubernetes.io/blog/2020/04/02/improvements-to-the-ingress-api-in-kubernetes-1.18/#better-path-matching-with-path-types
+    # pathType: ImplementationSpecific
+
+    ## Prometheus Ingress 的 TLS 配置
+    ## 密钥必须在命名空间中手动创建
+    ##
+    tls: []
+      # - secretName: prometheus-general-tls
+      #   hosts:
+      #     - prometheus.example.com
+
+  # -- BETA: 在此处配置图表的网关路由。
+  # 可以通过添加像 'main' 路由一样的字典键来添加更多路由。
+  # 请注意，这是此功能的早期 beta 版本，
+  # kube-prometheus-stack 不保证其工作并可能发生变化。
+  # 由于是 BETA，此功能将来可能/将会更改，恕不另行通知，除非您愿意承担风险，否则请勿使用
+  # [[参考]](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io%2fv1alpha2)
+  route:
+    main:
+      # -- 启用或禁用路由
+      enabled: false
+
+      # -- 设置路由 apiVersion，例如 gateway.networking.k8s.io/v1 or gateway.networking.k8s.io/v1alpha2
+      apiVersion: gateway.networking.k8s.io/v1
+      # -- 设置路由类型
+      # 有效选项为 GRPCRoute, HTTPRoute, TCPRoute, TLSRoute, UDPRoute
+      kind: HTTPRoute
+
+      annotations: {}
+      labels: {}
+
+      hostnames: []
+      # - my-filter.example.com
+      parentRefs: []
+      # - name: acme-gw
+
+      # -- 创建用于重定向的 http 路由 (https://gateway-api.sigs.k8s.io/guides/http-redirect-rewrite/#http-to-https-redirects)
+      ## 请注意，仅在网关的 http 监听器上启用此功能，以避免无限重定向。
+      ## 如果此项设置为 true，matches、filters 和 additionalRules 将被忽略。
+      httpsRedirect: false
+
+      matches:
+        - path:
+            type: PathPrefix
+            value: /
+
+      ## 过滤器定义应用于与此规则匹配的请求的过滤器。
+      filters: []
+
+      ## 可添加到路由的附加自定义规则
+      additionalRules: []
+
+  ## 配置创建将映射到每个 Prometheus 副本服务的 Ingress
+  ## 必须启用 prometheus.servicePerReplica
+  ##
+  ingressPerReplica:
+    enabled: false
+
+    ingressClassName: ""
+
+    annotations: {}
+    labels: {}
+
+    ## 每个副本 ingress 的最终主机名形式为
+    ## {{ ingressPerReplica.hostPrefix }}-{{ $replicaNumber }}.{{ ingressPerReplica.hostDomain }}
+    ##
+    ## 每个副本 ingress 的前缀，末尾将附加 `-$replicaNumber`
+    hostPrefix: ""
+    ## 将用于每个副本 ingress 的域
+    hostDomain: ""
+
+    ## 用于 ingress 规则的路径
+    ##
+    paths: []
+    # - /
+
+    ## 对于 Kubernetes >= 1.18，您应该指定 pathType（决定如何匹配 Ingress 路径）
+    ## 参考 https://kubernetes.io/blog/2020/04/02/improvements-to-the-ingress-api-in-kubernetes-1.18/#better-path-matching-with-path-types
+    # pathType: ImplementationSpecific
+
+    ## 包含 Prometheus 每个副本 ingress 的 TLS 证书的密钥名称
+    ## 密钥必须在命名空间中手动创建
+    tlsSecretName: ""
+
+    ## 为每个副本 Ingress 分离的密钥。可与 cert-manager 一起使用
+    ##
+    tlsSecretPerReplica:
+      enabled: false
+      ## 每个副本 ingress 的最终密钥形式为
+      ## {{ tlsSecretPerReplica.prefix }}-{{ $replicaNumber }}
+      ##
+      prefix: "prometheus"
+
+  serviceMonitor:
+    ## 如果为 true，则为 prometheus 创建一个 serviceMonitor
+    ##
+    selfMonitor: true
+
+    ## 抓取间隔。如果未设置，则使用 Prometheus 默认的抓取间隔。
+    ##
+    interval: ""
+
+    ## 附加标签
+    ##
+    additionalLabels: {}
+
+    ## SampleLimit 定义了每个抓取可接受的样本数的限制。
+    ##
+    sampleLimit: 0
+
+    ## TargetLimit 定义了可接受的抓取目标数的限制。
+    ##
+    targetLimit: 0
+
+    ## 每个抓取可接受的标签数的限制。仅在 Prometheus 2.27.0 及更高版本中有效。
+    ##
+    labelLimit: 0
+
+    ## 每个抓取可接受的标签名长度的限制。仅在 Prometheus 2.27.0 及更高版本中有效。
+    ##
+    labelNameLengthLimit: 0
+
+    ## 每个抓取可接受的标签值长度的限制。仅在 Prometheus 2.27.0 及更高版本中有效。
+    ##
+    labelValueLengthLimit: 0
+
+    ## scheme: 用于抓取的 HTTP 方案。例如，与 `tlsConfig` 一起使用以支持 istio mTLS。
+    scheme: ""
+
+    ## tlsConfig: 用于抓取端点时使用的 TLS 配置。例如，与 istio mTLS 一起使用。
+    ## 类型: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#tlsconfig
+    tlsConfig: {}
+
+    bearerTokenFile:
+
+    ## 在摄取前应用于样本的指标重新标记配置。
+    ##
+    metricRelabelings: []
+    # - action: keep
+    #   regex: 'kube_(daemonset|deployment|pod|namespace|node|statefulset).+'
+    #   sourceLabels: [__name__]
+
+    #   在摄取前应用于样本的重新标记配置。
+    ##
+    relabelings: []
+    # - sourceLabels: [__meta_kubernetes_pod_node_name]
+    #   separator: ;
+    #   regex: ^(.*)$
+    #   targetLabel: nodename
+    #   replacement: $1
+    #   action: replace
+
+    ## 附加端点
+    ##
+    additionalEndpoints: []
+    # - port: oauth-metrics
+    #   path: /metrics
+
+  ## 影响 prometheusSpec 的设置
+  ## 参考: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#prometheusspec
+  ##
+  prometheusSpec:
+    ## 有状态集的持久卷声明保留策略
+    ## whenDeleted 和 whenScaled 决定了
+    ## 有状态集在缩减和删除时
+    ## 是否删除（true）或保留（false）PVC。
+    ## 需要 Kubernetes 1.27.0+ 版本。
+    ## 参考: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#persistentvolumeclaim-retention
+    persistentVolumeClaimRetentionPolicy: {}
+    #  whenDeleted: Retain
+    #  whenScaled: Retain
+
+    ## 如果为 true，则向 prometheus 传递 --storage.tsdb.max-block-duration=2h。如果使用 Thanos，此操作已完成。
+    ##
+    disableCompaction: false
+
+    ## AutomountServiceAccountToken 指示是否应自动将服务账户令牌挂载到 Pod 中，
+    ## 如果未设置该字段，operator 默认会挂载服务账户令牌。
+    ## 警告: 请注意，默认情况下，Prometheus 需要服务账户令牌才能进行 Kubernetes 服务发现，
+    ## 可以使用战略合并补丁将服务账户令牌投影到 'prometheus' 容器中。
+    automountServiceAccountToken: true
+
+    ## APIServerConfig
+    ## 参考: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#apiserverconfig
+    ##
+    apiserverConfig: {}
+
+    ## 允许为 Prometheus 容器设置附加参数
+    ## 参考: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#monitoring.coreos.com/v1.Prometheus
+    additionalArgs: []
+
+    ## 抓取失败日志文件。
+    ## 重新加载配置将重新打开文件。
+    ## 默认为空（禁用）
+    ## 参考: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#monitoring.coreos.com/v1.Prometheus
+    ##
+    scrapeFailureLogFile: ""
+
+    ## 连续抓取之间的间隔。
+    ## 默认为 30s。
+    ## 参考: https://github.com/prometheus-operator/prometheus-operator/blob/release-0.44/pkg/prometheus/promcfg.go#L180-L183
+    ##
+    scrapeInterval: ""
+
+    ## 在出错前等待目标响应的秒数
+    ##
+    scrapeTimeout: ""
+
+    ## 暴露给 PodMonitors、ServiceMonitors、Probes 和 ScrapeConfigs 等抓取对象的抓取类列表。
+    ##
+    scrapeClasses: []
+    # - name: istio-mtls
+    #   default: false
+    #   tlsConfig:
+    #     caFile: /etc/prometheus/secrets/istio.default/root-cert.pem
+    #     certFile: /etc/prometheus/secrets/istio.default/cert-chain.pem
+
+    ## PodTargetLabels 被附加到所有 PodMonitor 和 ServiceMonitor 对象的 `spec.podTargetLabels` 字段。
+    ##
+    podTargetLabels: []
+    # - customlabel
+
+    ## 连续评估之间的间隔。
+    ##
+    evaluationInterval: ""
+
+    ## ListenLocal 使 Prometheus 服务器在回环上监听，这样它就不会绑定到 Pod IP。
+    ##
+    listenLocal: false
+
+    ## enableOTLPReceiver 启用 Prometheus 的 OTLP 接收器。
+    enableOTLPReceiver: false
+
+    ## EnableAdminAPI 启用 Prometheus 的管理 HTTP API，其中包括删除时间序列等功能。
+    ## 此功能默认禁用。
+    ## 参考: https://prometheus.io/docs/prometheus/latest/querying/api/#tsdb-admin-apis
+    ##
+    enableAdminAPI: false
+
+    ## 设置 Prometheus 版本，覆盖从镜像标签派生的版本。
+    ## 在标签不遵循 semver v2 的情况下很有用。
+    version: ""
+
+    ## WebTLSConfig 定义 HTTPS 的 TLS 参数
+    ## 参考: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#webtlsconfig
+    web: {}
+
+    ## 与示例相关的设置，可在运行时重新加载。
+    ## 它需要启用 exemplar storage 功能才能生效。
+    exemplars: {}
+      ## 所有序列存储在内存中的最大示例数。
+      ## 如果未设置，Prometheus 使用其默认值。
+      ## 值为零或小于零会禁用存储。
+      # maxSize: 100000
+
+    # EnableFeatures API 启用对 Prometheus 禁用功能的访问。
+    # 参考: https://prometheus.io/docs/prometheus/latest/feature_flags/
+    enableFeatures: []
+    # - exemplar-storage
+
+    ## https://prometheus.io/docs/guides/opentelemetry
+    ##
+    otlp: {}
+      # promoteResourceAttributes: []
+      # keepIdentifyingResourceAttributes: false
+      # translationStrategy: NoUTF8EscapingWithSuffixes
+      # convertHistogramsToNHCB: false
+
+    ##
+    serviceName:
+
+    ## Prometheus 的镜像。
+    ##
+    image:
+      registry: quay.io
+      repository: prometheus/prometheus
+      tag: v3.5.0
+      sha: ""
+      pullPolicy: IfNotPresent
+
+    ## 用于节点污点的容忍度
+    ## 参考: https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/
+    ##
+    tolerations: []
+    #  - key: "key"
+    #    operator: "Equal"
+    #    value: "value"
+    #    effect: "NoSchedule"
+
+    ## 如果指定，Pod 的拓扑扩展约束。
+    ## 参考: https://kubernetes.io/docs/concepts/scheduling-eviction/topology-spread-constraints/
+    ##
+    topologySpreadConstraints: []
+    # - maxSkew: 1
+    #   topologyKey: topology.kubernetes.io/zone
+    #   whenUnsatisfiable: DoNotSchedule
+    #   labelSelector:
+    #     matchLabels:
+    #       app: prometheus
+
+    ## 发送警报的 Alertmanagers
+    ## 参考: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#alertmanagerendpoints
+    ##
+    ## 默认配置将连接到作为此版本一部分部署的 alertmanager
+    ##
+    alertingEndpoints: []
+    # - name: ""
+    #   namespace: ""
+    #   port: http
+    #   scheme: http
+    #   pathPrefix: ""
+    #   tlsConfig: {}
+    #   bearerTokenFile: ""
+    #   apiVersion: v2
+
+    ## 在与外部系统通信时添加到任何时间序列或警报的外部标签
+    ##
+    externalLabels: {}
+
+    ## 在 prometheus-server 上启用 --web.enable-remote-write-receiver 标志
+    ##
+    enableRemoteWriteReceiver: false
+
+    ## 用于表示副本名称的外部标签名称
+    ##
+    replicaExternalLabelName: ""
+
+    ## 如果为 true，Operator 将不会添加用于表示副本名称的外部标签
+    ##
+    replicaExternalLabelNameClear: false
+
+    ## 用于表示 Prometheus 实例名称的外部标签名称
+    ##
+    prometheusExternalLabelName: ""
+
+    ## 如果为 true，Operator 将不会添加用于表示 Prometheus 实例名称的外部标签
+    ##
+    prometheusExternalLabelNameClear: false
+
+    ## Prometheus 可访问的外部 URL。
+    ##
+    externalUrl: ""
+
+    ## 定义 Pod 调度到的节点。
+    ## 参考: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#nodeselector
+    ##
+    nodeSelector: {}
+
+    ## Secrets 是与 Prometheus 对象位于同一命名空间中的 Secrets 列表，它们将被挂载到 Prometheus Pod 中。
+    ## Secrets 被挂载到 /etc/prometheus/secrets/。Prometheus 对象创建后对 Secrets 的更改不会
+    ## 反映在正在运行的 Pod 中。要更改挂载到 Prometheus Pod 中的 secrets，必须删除并使用新的 secrets 列表重新创建该对象。
+    ##
+    secrets: []
+
+    ## ConfigMaps 是与 Prometheus 对象位于同一命名空间中的 ConfigMaps 列表，它们将被挂载到 Prometheus Pod 中。
+    ## ConfigMaps 被挂载到 /etc/prometheus/configmaps/。
+    ##
+    configMaps: []
+
+    ## QuerySpec 定义了启动 Prometheus 时查询的命令行标志。
+    ## 参考: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#queryspec
+    ##
+    query: {}
+
+    ## 如果为 nil，则选择自己的命名空间。选择用于 PrometheusRules 发现的命名空间。
+    ruleNamespaceSelector: {}
+    ## 示例：选择命名空间中带有标签 "prometheus" 且值为 "somelabel" 的 PrometheusRules
+    # ruleNamespaceSelector:
+    #   matchLabels:
+    #     prometheus: somelabel
+
+    ## 如果为 true，prometheus.prometheusSpec.ruleSelector 的 nil 或 {} 值将导致
+    ## 基于 helm 部署中的值创建 prometheus 资源的选择器，
+    ## 这也将匹配创建的 PrometheusRule 资源
+    ##
+    ruleSelectorNilUsesHelmValues: true
+
+    ## 选择用于目标发现的 PrometheusRules。
+    ## 如果为 {}，则选择所有 PrometheusRules
+    ##
+    ruleSelector: {}
+    ## 示例：选择所有带有标签 "prometheus" 且值为 "example-rules" 或 "example-rules-2" 的 PrometheusRules 资源
+    # ruleSelector:
+    #   matchExpressions:
+    #     - key: prometheus
+    #       operator: In
+    #       values:
+    #         - example-rules
+    #         - example-rules-2
+    #
+    ## 示例：选择所有带有标签 "role" 且值为 "example-rules" 的 PrometheusRules 资源
+    # ruleSelector:
+    #   matchLabels:
+    #     role: example-rules
+
+    ## 如果为 true，prometheus.prometheusSpec.serviceMonitorSelector 的 nil 或 {} 值将导致
+    ## 基于 helm 部署中的值创建 prometheus 资源的选择器，
+    ## 这也将匹配创建的服务监控器
+    ##
+    serviceMonitorSelectorNilUsesHelmValues: true
+
+    ## 选择用于目标发现的 ServiceMonitors。
+    ## 如果为 {}，则选择所有 ServiceMonitors
+    ##
+    serviceMonitorSelector: {}
+    ## 示例：选择带有标签 "prometheus" 且值为 "somelabel" 的 ServiceMonitors
+    # serviceMonitorSelector:
+    #   matchLabels:
+    #     prometheus: somelabel
+
+    ## 选择用于 ServiceMonitor 发现的命名空间。
+    ##
+    serviceMonitorNamespaceSelector: {}
+    ## 示例：选择命名空间中带有标签 "prometheus" 且值为 "somelabel" 的 ServiceMonitors
+    # serviceMonitorNamespaceSelector:
+    #   matchLabels:
+    #     prometheus: somelabel
+
+    ## 如果为 true，prometheus.prometheusSpec.podMonitorSelector 的 nil 或 {} 值将导致
+    ## 基于 helm 部署中的值创建 prometheus 资源的选择器，
+    ## 这也将匹配创建的 pod 监控器
+    ##
+    podMonitorSelectorNilUsesHelmValues: true
+
+    ## 选择用于目标发现的 PodMonitors。
+    ## 如果为 {}，则选择所有 PodMonitors
+    ##
+    podMonitorSelector: {}
+    ## 示例：选择带有标签 "prometheus" 且值为 "somelabel" 的 PodMonitors
+    # podMonitorSelector:
+    #   matchLabels:
+    #     prometheus: somelabel
+
+    ## 如果为 nil，则选择自己的命名空间。选择用于 PodMonitor 发现的命名空间。
+    podMonitorNamespaceSelector: {}
+    ## 示例：选择命名空间中带有标签 "prometheus" 且值为 "somelabel" 的 PodMonitor
+    # podMonitorNamespaceSelector:
+    #   matchLabels:
+    #     prometheus: somelabel
+
+    ## 如果为 true，prometheus.prometheusSpec.probeSelector 的 nil 或 {} 值将导致
+    ## 基于 helm 部署中的值创建 prometheus 资源的选择器，
+    ## 这也将匹配创建的探针
+    ##
+    probeSelectorNilUsesHelmValues: true
+
+    ## 选择用于目标发现的 Probes。
+    ## 如果为 {}，则选择所有 Probes
+    ##
+    probeSelector: {}
+    ## 示例：选择带有标签 "prometheus" 且值为 "somelabel" 的 Probes
+    # probeSelector:
+    #   matchLabels:
+    #     prometheus: somelabel
+
+    ## 如果为 nil，则选择自己的命名空间。选择用于 Probe 发现的命名空间。
+    probeNamespaceSelector: {}
+    ## 示例：选择命名空间中带有标签 "prometheus" 且值为 "somelabel" 的 Probe
+    # probeNamespaceSelector:
+    #   matchLabels:
+    #     prometheus: somelabel
+
+    ## 如果为 true，prometheus.prometheusSpec.scrapeConfigSelector 的 nil 或 {} 值将导致
+    ## 基于 helm 部署中的值创建 prometheus 资源的选择器，
+    ## 这也将匹配创建的 scrapeConfigs
+    ##
+    ## 如果为 null 且 scrapeConfigSelector 也为 null，则从 prometheusSpec 中排除该字段
+    ## （保持与 CRD 旧版本的向下兼容性）
+    ##
+    scrapeConfigSelectorNilUsesHelmValues: true
+
+    ## 选择用于目标发现的 scrapeConfigs。
+    ## 如果为 {}，则选择所有 scrapeConfigs
+    ##
+    scrapeConfigSelector: {}
+    ## 示例：选择带有标签 "prometheus" 且值为 "somelabel" 的 scrapeConfigs
+    # scrapeConfigSelector:
+    #   matchLabels:
+    #     prometheus: somelabel
+
+    ## 如果为 nil，则选择自己的命名空间。选择用于 scrapeConfig 发现的命名空间。
+    ## 如果为 null，则从 prometheusSpec 中排除该字段（保持与 CRD 旧版本的向下兼容性）
+    scrapeConfigNamespaceSelector: {}
+    ## 示例：选择命名空间中带有标签 "prometheus" 且值为 "somelabel" 的 scrapeConfig
+    # scrapeConfigNamespaceSelector:
+    #   matchLabels:
+    #     prometheus: somelabel
+
+    ## 指标保留时长
+    ##
+    retention: 10d
+
+    ## 指标的最大大小
+    ##
+    retentionSize: ""
+
+    ## 允许在指定时间内摄取乱序/超出范围的样本到 Prometheus
+    ## 参考 https://prometheus.io/docs/prometheus/latest/configuration/configuration/#tsdb
+    tsdb:
+      outOfOrderTimeWindow: 0s
+
+    ## 使用 Snappy 启用预写日志的压缩。
+    ##
+    walCompression: true
+
+    ## 如果为 true，Operator 将不会处理任何 Prometheus 配置更改
+    ##
+    paused: false
+
+    ## 为 Prometheus 部署部署的每个分片的副本数。
+    ## 副本数乘以分片数是创建的 Pod 总数。
+    ##
+    replicas: 1
+
+    ## 实验性: 用于分配目标的的分片数。
+    ## 副本数乘以分片数是创建的 Pod 总数。
+    ## 请注意，缩减分片不会将数据重新分片到剩余的实例上，必须手动移动。
+    ## 增加分片也不会重新分片数据，但数据将继续可从同一实例获取。
+    ## 要全局查询，请使用 Thanos sidecar 和 Thanos querier 或将数据远程写入中央位置。
+    ## 分片是根据 `__address__` 目标元标签的内容进行的。
+    ##
+    shards: 1
+
+    ## Prometheus 的日志级别
+    ##
+    logLevel: info
+
+    ## Prometheus 的日志格式
+    ##
+    logFormat: logfmt
+
+    ## 用于注册路由的前缀，覆盖 externalUrl 路由。
+    ## 对重写 URL 的代理很有用。
+    ##
+    routePrefix: /
+
+    ## 标准对象的元数据。更多信息: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#metadata
+    ## 元数据标签和注解会传播到 prometheus Pod。
+    ##
+    podMetadata: {}
+    # labels:
+    #   app: prometheus
+    #   k8s-app: prometheus
+
+    ## Pod 反亲和性可以阻止调度器将 Prometheus 副本调度到同一节点上。
+    ## 默认值 "soft" 意味着调度器应该“倾向于”不将两个副本 Pod 调度到同一节点，但不提供保证。
+    ## 值 "hard" 意味着调度器“必须”不将两个副本 Pod 调度到同一节点上。
+    ## 值 "" 将禁用 Pod 反亲和性，因此不会配置任何反亲和性规则。
+    podAntiAffinity: "soft"
+
+    ## 如果启用了反亲和性，则设置用于反亲和性的 topologyKey。
+    ## 例如，可以更改为 failure-domain.beta.kubernetes.io/zone
+    ##
+    podAntiAffinityTopologyKey: kubernetes.io/hostname
+
+    ## 为 prometheus 实例分配自定义亲和性规则
+    ## 参考: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/
+    ##
+    affinity: {}
+    # nodeAffinity:
+    #   requiredDuringSchedulingIgnoredDuringExecution:
+    #     nodeSelectorTerms:
+    #     - matchExpressions:
+    #       - key: kubernetes.io/e2e-az-name
+    #         operator: In
+    #         values:
+    #         - e2e-az1
+    #         - e2e-az2
+
+    ## Prometheus 的 remote_read 规范配置。
+    ## 参考: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#remotereadspec
+    remoteRead: []
+    # - url: http://remote1/read
+    ## additionalRemoteRead 附加到 remoteRead
+    additionalRemoteRead: []
+
+    ## Prometheus 的 remote_write 规范配置。
+    ## 参考: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#remotewritespec
+    remoteWrite: []
+    # - url: http://remote1/push
+    ## additionalRemoteWrite 附加到 remoteWrite
+    additionalRemoteWrite: []
+
+    ## 启用/禁用 prometheus 远程写入功能的 Grafana 仪表板配置
+    remoteWriteDashboards: false
+
+    ## 资源限制和请求
+    ##
+    resources: {}
+    # requests:
+    #   memory: 400Mi
+
+    ## 用于持久化数据的 Prometheus StorageSpec
+    ## 参考: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/platform/storage.md
+    ##
+    storageSpec: {}
+    ## 使用 PersistentVolumeClaim
+    ##
+    #  volumeClaimTemplate:
+    #    spec:
+    #      storageClassName: gluster
+    #      accessModes: ["ReadWriteOnce"]
+    #      resources:
+    #        requests:
+    #          storage: 50Gi
+    #      selector: {}
+
+    ## 使用 tmpfs 卷
+    ##
+    #  emptyDir:
+    #    medium: Memory
+
+    # 输出 StatefulSet 定义上的附加卷。
+    volumes: []
+
+    # 输出 StatefulSet 定义上的附加 VolumeMounts。
+    volumeMounts: []
+
+    ## AdditionalScrapeConfigs 允许指定附加的 Prometheus 抓取配置。抓取配置
+    ## 附加到 Prometheus Operator 生成的配置之后。作业配置必须具有
+    ## 官方 Prometheus 文档中指定的格式:
+    ## https://prometheus.io/docs/prometheus/latest/configuration/configuration/#scrape_config。由于抓取配置是
+    ## 附加的，用户有责任确保其有效。请注意，使用此功能可能会
+    ## 导致 Prometheus 升级失败。建议查看 Prometheus 发行说明，以确保在升级后
+    ## 没有不兼容的抓取配置会破坏 Prometheus。
+    ## AdditionalScrapeConfigs 可以定义为列表或模板化字符串。
+    ##
+    ## 下面的抓取配置示例将查找主节点，前提是其名称为 .*mst.*，将端口
+    ## 重新标记为 2379，并允许抓取在所有 Kubernetes 主节点上运行的 etcd
+    ##
+    additionalScrapeConfigs: []
+    # - job_name: kube-etcd
+    #   kubernetes_sd_configs:
+    #     - role: node
+    #   scheme: https
+    #   tls_config:
+    #     ca_file:   /etc/prometheus/secrets/etcd-client-cert/etcd-ca
+    #     cert_file: /etc/prometheus/secrets/etcd-client-cert/etcd-client
+    #     key_file:  /etc/prometheus/secrets/etcd-client-cert/etcd-client-key
+    #   relabel_configs:
+    #   - action: labelmap
+    #     regex: __meta_kubernetes_node_label_(.+)
+    #   - source_labels: [__address__]
+    #     action: replace
+    #     targetLabel: __address__
+    #     regex: ([^:;]+):(\d+)
+    #     replacement: ${1}:2379
+    #   - source_labels: [__meta_kubernetes_node_name]
+    #     action: keep
+    #     regex: .*mst.*
+    #   - source_labels: [__meta_kubernetes_node_name]
+    #     action: replace
+    #     targetLabel: node
+    #     regex: (.*)
+    #     replacement: ${1}
+    #   metric_relabel_configs:
+    #   - regex: (kubernetes_io_hostname|failure_domain_beta_kubernetes_io_region|beta_kubernetes_io_os|beta_kubernetes_io_arch|beta_kubernetes_io_instance_type|failure_domain_beta_kubernetes_io_zone)
+    #     action: labeldrop
+    #
+    ## 如果抓取配置包含重复部分，您可能希望使用模板。
+    ## 在下面的示例中，您可以看到如何为多个区域定义 `gce_sd_configs`
+    # additionalScrapeConfigs: |
+    #  - job_name: "node-exporter"
+    #    gce_sd_configs:
+    #    {{range $zone := .Values.gcp_zones}}
+    #    - project: "project1"
+    #      zone: "{{$zone}}"
+    #      port: 9100
+    #    {{end}}
+    #    relabel_configs:
+    #    ...
+
+    ## 如果附加的抓取配置已部署在单个密钥文件中，您可以使用此部分。
+    ## 期望值为密钥名称和密钥
+    ## 不能与 additionalScrapeConfigs 一起使用
+    additionalScrapeConfigsSecret: {}
+      # enabled: false
+      # name:
+      # key:
+
+    ## additionalPrometheusSecretsAnnotations 允许向 kubernetes 密钥添加注解。这对于
+    ## 通过 spinnaker 部署以禁用密钥上的版本控制很有用，例如 strategy.spinnaker.io/versioned: 'false'
+    additionalPrometheusSecretsAnnotations: {}
+
+    ## AdditionalAlertManagerConfigs 允许以官方 Prometheus 文档中指定的格式进行手动配置
+    ## https://prometheus.io/docs/prometheus/latest/configuration/configuration/#alertmanager_config。
+    ## 指定的 AlertManager 配置将附加到 Prometheus Operator 生成的配置之后。
+    ## 由于 AlertManager 配置是附加的，用户有责任确保其有效。请注意，使用此功能可能会
+    ## 导致 Prometheus 升级失败。建议查看 Prometheus 发行说明，以确保在升级后
+    ## 没有不兼容的 AlertManager 配置会破坏 Prometheus。
+    ## additionalAlertManagerConfigs: []
+    # - consul_sd_configs:
+    # - server: consul.dev.test:8500
+    # scheme: http
+    # datacenter: dev
+    # tag_separator: ','
+    # services:
+    # - metrics-prometheus-alertmanager
+
+    ## 如果附加的 alertmanager 配置已部署在单个密钥中，或者您想将其与 helm 部署分开管理，则可以使用此部分。
+    ## 期望值为密钥名称和密钥
+    ## 不能与 additionalAlertManagerConfigs 一起使用
+    additionalAlertManagerConfigsSecret: {}
+    # name:
+    # key:
+    # optional: false
+
+    ## AdditionalAlertRelabelConfigs 允许指定 Prometheus 警报重新标记配置。指定的警报重新标记配置将附加
+    ## 到 Prometheus Operator 生成的配置之后。指定的警报重新标记配置必须具有官方
+    ## Prometheus 文档中指定的格式：https://prometheus.io/docs/prometheus/latest/configuration/configuration/#alert_relabel_configs。
+    ## 由于警报重新标记配置是附加的，用户有责任确保其有效。请注意，使用此功能可能会
+    ## 导致 Prometheus 升级失败。建议查看 Prometheus 发行说明，以确保在升级后
+    ## 没有不兼容的警报重新标记配置会破坏 Prometheus。
+    ## additionalAlertRelabelConfigs: []
+    # - separator: ;
+    # regex: prometheus_replica
+    # replacement: $1
+    # action: labeldrop
+
+    ## 如果附加的警报重新标记配置已部署在单个密钥中，或者您想将其与 helm 部署分开管理，则可以使用此部分。
+    ## 期望值为密钥名称和密钥
+    ## 不能与 additionalAlertRelabelConfigs 一起使用
+    additionalAlertRelabelConfigsSecret: {}
+    # name:
+    # key:
+
+    ## SecurityContext 包含 Pod 级别的安全属性和通用容器设置。
+    ## 默认情况下，非 root 用户，uid 为 1000，gid 为 2000。
+    ## https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md
+    ## securityContext:
+    runAsGroup: 2000
+    runAsNonRoot: true
+    runAsUser: 1000
+    fsGroup: 2000
+    seccompProfile:
+      type: RuntimeDefault
+
+    ## 分配给 Pod 的优先级类
+    ## priorityClassName: ""
+
+    ## Thanos 配置允许在 Thanos 环境中配置 Prometheus 服务器的各个方面。
+    ## 此部分为实验性功能，任何版本都可能发生重大变化，恕不另行通知。
+    ## 这是实验性功能，任何版本都可能发生重大变化，不保证向后兼容性。
+    ## 参考: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#thanosspec
+    ## thanos: {}
+    # secretProviderClass:
+    # provider: gcp
+    # parameters:
+    # secrets: |
+    # - resourceName: "projects/$PROJECT_ID/secrets/testsecret/versions/latest"
+    # fileName: "objstore.yaml"
+    ## ObjectStorageConfig 在 Thanos 中配置对象存储。
+    # objectStorageConfig:
+    # # 如果已配置，请使用现有密钥，objectStorageConfig.secret 将不被使用
+    # existingSecret: {}
+    # # name: ""
+    # # key: ""
+    # # 将渲染 objectStorageConfig 密钥数据并配置为供 Thanos 自定义资源使用，
+    # # 当 prometheusspec.thanos.objectStorageConfig.existingSecret 设置时将被忽略
+    # # https://thanos.io/tip/thanos/storage.md/#s3
+    # secret: {}
+    # # type: S3
+    # # config:
+    # # bucket: ""
+    # # endpoint: ""
+    # # region: ""
+    # # access_key: ""
+    # # secret_key: ""
+
+    ## Containers 允许注入附加容器。这旨在允许向 Prometheus Pod 添加身份验证代理。
+    ## 如果使用代理 extraContainer，则使用代理容器端口更新 targetPort
+    containers: []
+    # containers:
+    # - name: oauth-proxy
+    # image: quay.io/oauth2-proxy/oauth2-proxy:v7.10.0
+    # args:
+    # - --upstream=http://127.0.0.1:9090
+    # - --http-address=0.0.0.0:8081
+    # - --metrics-address=0.0.0.0:8082
+    # - ...
+    # ports:
+    # - containerPort: 8081
+    # name: oauth-proxy
+    # protocol: TCP
+    # - containerPort: 8082
+    # name: oauth-metrics
+    # protocol: TCP
+    # resources: {}
+
+    ## InitContainers 允许注入附加的 initContainers。这旨在允许在启动 Prometheus
+    ## 之前对挂载的卷进行一些更改（权限、目录树）
+    initContainers: []
+
+    ## 用于 Prometheus 的端口名称。
+    ## portName: "http-web"
+
+    ## ArbitraryFSAccessThroughSMs 配置基于服务监控器的配置是否可以访问
+    ## Prometheus 容器文件系统上的任意文件，例如持票人令牌文件。
+    arbitraryFSAccessThroughSMs: false
+
+    ## OverrideHonorLabels 如果设置为 true，则覆盖所有用户配置的 honor_labels。如果在 ServiceMonitor
+    ## 或 PodMonitor 中将 HonorLabels 设置为 true，则这将把 honor_labels 覆盖为 false。
+    overrideHonorLabels: false
+
+    ## OverrideHonorTimestamps 允许全局强制在所有抓取配置中遵守时间戳。
+    overrideHonorTimestamps: false
+
+    ## 当 ignoreNamespaceSelectors 设置为 true 时，所有 PodMonitor、ServiceMonitor 和 Probe 对象的 namespaceSelector 将被忽略，
+    ## 它们将仅发现 PodMonitor、ServiceMonitor 和 Probe 对象命名空间内的目标，
+    ## 并且服务监控器将安装在默认服务命名空间中。
+    ## 默认为 false。
+    ignoreNamespaceSelectors: false
+
+    ## EnforcedNamespaceLabel 强制为每个用户创建的警报和指标添加一个源命名空间标签。
+    ## 标签值将始终是正在创建的对象的命名空间。
+    ## 默认禁用
+    enforcedNamespaceLabel: ""
+
+    ## PrometheusRulesExcludedFromEnforce - 被排除在强制添加命名空间标签之外的 prometheus 规则列表。
+    ## 仅在 enforcedNamespaceLabel 设置为 true 时有效。确保为每对都设置了 ruleNamespace 和 ruleName
+    ## 已弃用，请改用 `excludedFromEnforcement`
+    prometheusRulesExcludedFromEnforce: []
+
+    ## ExcludedFromEnforcement - 被排除在强制添加源命名空间标签之外的 PodMonitor、ServiceMonitor、Probe 和 PrometheusRule 对象的引用列表。
+    ## 仅在 enforcedNamespaceLabel 设置为 true 时有效。
+    ## 参考 https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#objectreference
+    excludedFromEnforcement: []
+
+    ## QueryLogFile 指定用于记录 PromQL 查询的文件。请注意，此位置必须可写，
+    ## 并且可以使用附加卷进行持久化。或者，位置可以设置为 stdout 位置，例如
+    ## /dev/stdout，以将查询信息记录到默认的 Prometheus 日志流。此功能仅在 Prometheus >= 2.16.0
+    ## 版本中可用。有关更多详细信息，请参阅 Prometheus 文档 (https://prometheus.io/docs/guides/query-log/)
+    queryLogFile: false
+
+    # 用于为 Prometheus 设置全局 sample_limit。这可作为 ServiceMonitor 或/和 PodMonitor 的默认 SampleLimit。
+    # 设置为 'false' 以禁用全局 sample_limit。或设置为数字以覆盖默认值。
+    sampleLimit: false
+
+    # EnforcedKeepDroppedTargetsLimit 定义了因重新标记而被丢弃的保留在内存中的目标数量。
+    # 该值将覆盖 ServiceMonitor、PodMonitor、Probe 对象设置的任何 spec.keepDroppedTargets，除非 spec.keepDroppedTargets
+    # 大于零且小于 spec.enforcedKeepDroppedTargets。0 表示无限制。
+    enforcedKeepDroppedTargets: 0
+
+    ## EnforcedSampleLimit 定义了全局可接受的抓取样本数限制。这会覆盖每个 ServiceMonitor 或/和 PodMonitor
+    ## 设置的任何 SampleLimit。它旨在供管理员用于强制 SampleLimit 以保持样本/序列的总数
+    ## 在所需限制之下。请注意，如果 SampleLimit 较低，将使用该值。
+    enforcedSampleLimit: false
+
+    ## EnforcedTargetLimit 定义了全局可接受的抓取目标数限制。这会覆盖每个 ServiceMonitor 或/和 PodMonitor
+    ## 设置的任何 TargetLimit。它旨在供管理员用于强制 TargetLimit 以保持目标总数
+    ## 在所需限制之下。请注意，如果 TargetLimit 较低，将使用该值，但如果任一值为零，
+    ## 则使用非零值。如果两个值都为零，则不强制执行限制。
+    enforcedTargetLimit: false
+
+    ## 每个抓取可接受的标签数限制。如果在指标重新标记后存在多于此数量的标签，
+    ## 整个抓取将被视为失败。0 表示无限制。仅在 Prometheus 2.27.0 及更高版本中有效。
+    enforcedLabelLimit: false
+
+    ## 每个抓取可接受的标签名长度限制。如果标签名在指标重新标记后长于此数量，
+    ## 整个抓取将被视为失败。0 表示无限制。仅在 Prometheus 2.27.0 及更高版本中有效。
+    enforcedLabelNameLengthLimit: false
+
+    ## 每个抓取可接受的标签值长度限制。如果标签值在指标重新标记后长于此数量，
+    ## 整个抓取将被视为失败。0 表示无限制。仅在 Prometheus 2.27.0 及更高版本中有效。
+    enforcedLabelValueLengthLimit: false
+
+    ## AllowOverlappingBlocks 启用 Prometheus 中的垂直压缩和垂直查询合并。这在 Prometheus 中
+    ## 仍处于实验阶段，因此在任何即将发布的版本中都可能发生变化。
+    allowOverlappingBlocks: false
+
+    ## 指定指标和标签名称的验证方案。
+    ## 支持的值有：Legacy, UTF8
+    nameValidationScheme: ""
+
+    ## 新创建的 Pod 至少需要保持就绪的秒数，而其任何容器都没有崩溃，才能被视为可用。
+    ## 默认为 0（Pod 一旦准备就绪即被视为可用）。
+    minReadySeconds: 0
+
+    # 对于使用自定义 CNI（如 calico）的托管 Kubernetes 集群（如 AWS EKS），
+    # 因为 AWS 管理的控制平面无法与 Pod 的 IP CIDR 通信，并且准入 webhook 不起作用
+    # 如果为 true，则使用主机的网络命名空间。请务必了解启用此功能时的安全影响。
+    # 启用 hostNetwork 后，dnsPolicy 将自动设置为 ClusterFirstWithHostNet。
+    hostNetwork: false
+
+    # HostAlias 包含 IP 和主机名之间的映射，将被注入到 Pod 的 hosts 文件中。
+    hostAliases: []
+    # - ip: 10.10.0.100
+    # hostnames:
+    # - a1.app.local
+    # - b1.app.local
+
+    ## TracingConfig 在 Prometheus 中配置跟踪。
+    ## 参考 https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#prometheustracingconfig
+    tracingConfig: {}
+
+    ## 定义用于从 ServiceMonitor 对象和 Alertmanager 端点发现目标的发现角色。
+    ## 如果设置，该值应为 "Endpoints" 或 "EndpointSlice"。如果未设置，operator 假定为 "Endpoints" 角色。
+    serviceDiscoveryRole: ""
+
+    ## 未被上述属性覆盖的附加配置。（通过 tpl 传递）
+    additionalConfig: {}
+
+    ## 未被上述属性覆盖的附加配置。
+    ## 如果您需要 alertmanagerSpec 内的高级模板，则很有用。
+    ## 否则，请使用 prometheus.prometheusSpec.additionalConfig（通过 tpl 传递）
+    additionalConfigString: ""
+
+    ## 定义 `prometheus` 容器的启动探针在被视为失败之前将等待的最长时间（秒）。
+    ## WAL 重放完成后，启动探针将返回成功。如果设置，该值应大于 60（秒）。
+    ## 否则，它将等于 900 秒（15 分钟）。
+    maximumStartupDurationSeconds: 0
+
+    ## 为 Prometheus 实例设置默认的 scrapeProtocols
+    ## https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#scrapeprotocolstring-alias
+    scrapeProtocols: []
+
+    additionalRulesForClusterRole: []
+    # - apiGroups: [ "" ]
+    # resources:
+    # - nodes/proxy
+    # verbs: [ "get", "list", "watch" ]
+
+    additionalServiceMonitors: []
+  ## 要创建的 ServiceMonitor 的名称
+  ##
+  # - name: ""
+
+  ## 用于 ServiceMonitorSelector 的附加标签。与图表的标准标签一起使用。
+  ##
+  # additionalLabels: {}
+
+  ## 用于将作业名称组装成 <标签值>-<端口> 形式的服务标签。
+  ## 如果未指定标签，则使用服务名称。
+  ##
+  # jobLabel: ""
+
+  ## 从 Kubernetes 服务转移到目标的标签
+  ##
+  # targetLabels: []
+
+  ## 从 Kubernetes Pods 转移到目标的标签
+  ##
+  # podTargetLabels: []
+
+  ## 适用于此 ServiceMonitor 的服务标签选择器。
+  ##
+  # selector: {}
+    ## 示例：选择所有带有标签 "monitoredby"，并且其值是 "example-service-1" 或 "example-service-2" 的服务。
+    ##
+    # matchExpressions:
+    #   - key: "monitoredby"
+    #     operator: In
+    #     values:
+    #       - example-service-1
+    #       - example-service-2
+    ## 服务的标签选择器
+##
+# matchLabels: {}
+
+## 选择服务的命名空间
+##
+# namespaceSelector:
+  ## 匹配所有命名空间
+  ##
+  # any: false
+
+  ## 明确列出要选择的命名空间名称
+  ##
+  # matchNames: []
+
+## 要监控的所选服务的端点
+##
+# endpoints: []
+  ## 端点服务端口的名称
+  ## 与 targetPort 互斥
+  # - port: ""
+
+  ## 端点目标端口的名称或编号
+  ## 与 port 互斥
+  # - targetPort: ""
+
+  ## 包含用于抓取目标的 bearer token 的文件
+  ##
+  #   bearerTokenFile: ""
+
+  ## 抓取指标的间隔时间
+  ##
+  #   interval: 30s
+
+  ## 抓取指标的 HTTP 路径
+  ##
+  #   path: /metrics
+
+  ## 用于抓取的 HTTP 方案
+  ##
+  #   scheme: http
+
+  ## 抓取端点时使用的 TLS 配置
+  ##
+  #   tlsConfig:
+
+    ## CA 文件的路径
+    ##
+    # caFile: ""
+
+    ## 客户端证书文件的路径
+    ##
+    # certFile: ""
+
+    ## 跳过证书验证
+    ##
+    # insecureSkipVerify: false
+
+    ## 客户端密钥文件的路径
+    ##
+    # keyFile: ""
+
+    ## 用于验证主机名的服务器名称
+    ##
+    # serverName: ""
+
+  ## 抓取后、摄取前应用于样本的指标重新标记配置。
+  ## 参考: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#relabelconfig
+  ##
+  # metricRelabelings: []
+  # - action: keep
+  #   regex: 'kube_(daemonset|deployment|pod|namespace|node|statefulset).+'
+  #   sourceLabels: [__name__]
+
+  ## 抓取前应用于样本的重新标记配置
+  ## 参考: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#relabelconfig
+  ##
+  # relabelings: []
+  # - sourceLabels: [__meta_kubernetes_pod_node_name]
+  #   separator: ;
+  #   regex: ^(.*)$
+  #   targetLabel: nodename
+  #   replacement: $1
+  #   action: replace
+
+## Prometheus 用于抓取指标的回退抓取协议
+## 参考: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#monitoring.coreos.com/v1.ScrapeProtocol
+##
+# fallbackScrapeProtocol: ""
+
+additionalPodMonitors: []
+## 要创建的 PodMonitor 的名称
+##
+# - name: ""
+
+  ## 用于 PodMonitorSelector 的附加标签。与图表的标准标签一起使用。
+  ##
+  # additionalLabels: {}
+
+  ## 用于将作业名称组装成 <标签值>-<端口> 形式的 Pod 标签
+  ## 如果未指定标签，则使用 Pod 端点名称
+  ##
+  # jobLabel: ""
+
+  ## 适用于此 PodMonitor 的 Pod 标签选择器
+  ##
+  # selector: {}
+    ## 示例：选择所有带有标签 "monitoredby"，并且其值是 "example-pod-1" 或 "example-pod-2" 的 Pod
+    ##
+    # matchExpressions:
+    #   - key: "monitoredby"
+    #     operator: In
+    #     values:
+    #       - example-pod-1
+    #       - example-pod-2
+
+    ## Pods 的标签选择器
+    ##
+    # matchLabels: {}
+
+  ## PodTargetLabels 将 Kubernetes Pod 上的标签转移到目标。
+  ##
+  # podTargetLabels: {}
+
+  ## SampleLimit 定义了每个抓取可接受的样本数限制。
+  ##
+  # sampleLimit: 0
+
+  ## 选择 Pod 的命名空间
+  ##
+  # namespaceSelector:
+    ## 匹配任何命名空间
+    ##
+    # any: false
+
+    ## 明确列出要选择的命名空间名称
+    ##
+    # matchNames: []
+
+  ## 要监控的所选 Pod 的端点
+  ## https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#podmetricsendpoint
+  ##
+  # podMetricsEndpoints: []
+
+  ## Prometheus 用于抓取指标的回退抓取协议
+  ## 参考: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#monitoring.coreos.com/v1.ScrapeProtocol
+  ##
+  # fallbackScrapeProtocol: ""
+
+## thanosRuler 的配置
+## 参考: https://thanos.io/tip/components/rule.md/
+##
+thanosRuler:
+
+  ## 部署 thanosRuler
+  ##
+  enabled: false
+
+  ## ThanosRuler 的注解
+  ##
+  annotations: {}
+
+  ## ThanosRuler 使用的服务账户
+  ## 参考: https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/
+  ##
+  serviceAccount:
+    create: true
+    name: ""
+    annotations: {}
+
+  ## 为 ThanosRuler 配置 pod 破坏预算
+  ## 参考: https://kubernetes.io/docs/tasks/run-application/configure-pdb/#specifying-a-poddisruptionbudget
+  ##
+  podDisruptionBudget:
+    enabled: false
+    minAvailable: 1
+    # maxUnavailable: ""
+    unhealthyPodEvictionPolicy: AlwaysAllow
+
+  ingress:
+    enabled: false
+
+    ingressClassName: ""
+
+    annotations: {}
+
+    labels: {}
+
+    ## 如果启用了 Ingress，则必须提供主机名
+    ##
+    hosts: []
+      # - thanosruler.domain.com
+
+    ## 用于 ingress 规则的路径 - 一个路径应与 thanosruler.routePrefix 匹配
+    ##
+    paths: []
+    # - /
+
+    ## 对于 Kubernetes >= 1.18，您应该指定 pathType（决定如何匹配 Ingress 路径）
+    ## 参考: https://kubernetes.io/blog/2020/04/02/improvements-to-the-ingress-api-in-kubernetes-1.18/#better-path-matching-with-path-types
+    # pathType: ImplementationSpecific
+
+    ## ThanosRuler Ingress 的 TLS 配置
+    ## 密钥必须在命名空间中手动创建
+    ##
+    tls: []
+    # - secretName: thanosruler-general-tls
+    #   hosts:
+    #   - thanosruler.example.com
+
+  # -- BETA: 在此处配置图表的网关路由。
+  # 可以通过添加像 'main' 路由一样的字典键来添加更多路由。
+  # 请注意，这是此功能的早期 beta 版本，
+  # kube-prometheus-stack 不保证其工作并可能发生变化。
+  # 由于是 BETA，此功能将来可能/将会更改，恕不另行通知，除非您愿意承担风险，否则请勿使用
+  # [[参考]](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io%2fv1alpha2)
+  route:
+    main:
+      # -- 启用或禁用路由
+      enabled: false
+
+      # -- 设置路由 apiVersion，例如 gateway.networking.k8s.io/v1 或 gateway.networking.k8s.io/v1alpha2
+      apiVersion: gateway.networking.k8s.io/v1
+      # -- 设置路由类型
+      # 有效选项为 GRPCRoute, HTTPRoute, TCPRoute, TLSRoute, UDPRoute
+      kind: HTTPRoute
+
+      annotations: {}
+      labels: {}
+
+      hostnames: []
+      # - my-filter.example.com
+      parentRefs: []
+      # - name: acme-gw
+
+      # -- 创建用于重定向的 http 路由 (https://gateway-api.sigs.k8s.io/guides/http-redirect-rewrite/#http-to-https-redirects)
+      ## 请注意，仅在网关的 http 监听器上启用此功能，以避免无限重定向。
+      ## 如果此项设置为 true，matches、filters 和 additionalRules 将被忽略。
+      httpsRedirect: false
+
+      matches:
+        - path:
+            type: PathPrefix
+            value: /
+
+      ## 过滤器定义应用于与此规则匹配的请求的过滤器。
+      filters: []
+
+      ## 可添加到路由的附加自定义规则
+      additionalRules: []
+
+  ## ThanosRuler 服务配置
+  ##
+  service:
+    enabled: true
+    annotations: {}
+    labels: {}
+    clusterIP: ""
+    ipDualStack:
+      enabled: false
+      ipFamilies: ["IPv6", "IPv4"]
+      ipFamilyPolicy: "PreferDualStack"
+
+    ## ThanosRuler 服务监听的端口
+    ##
+    port: 10902
+    ## 与代理 extraContainer 端口一起使用
+    ##
+    targetPort: 10902
+    ## 在每个节点上暴露的端口
+    ## 仅在 service.type 为 'NodePort' 时使用
+    ##
+    nodePort: 30905
+    ## Prometheus 服务器服务可用的 IP 地址列表
+    ## 参考: https://kubernetes.io/docs/concepts/services-networking/service/#external-ips
+    ##
+
+    ## ThanosRuler 服务要打开的附加端口
+    additionalPorts: []
+
+    externalIPs: []
+    loadBalancerIP: ""
+    loadBalancerSourceRanges: []
+
+    ## 表示此服务是否希望将外部流量路由到节点本地或集群范围的端点
+    ##
+    externalTrafficPolicy: Cluster
+
+    ## 服务类型
+    ##
+    type: ClusterIP
+
+  ## 为 ThanosRuler 服务创建 ServiceMonitor 的配置
+  ##
+  serviceMonitor:
+    ## 如果为 true，则为 thanosRuler 创建一个 serviceMonitor
+    ##
+    selfMonitor: true
+
+    ## 抓取间隔。如果未设置，则使用 Prometheus 默认的抓取间隔。
+    ##
+    interval: ""
+
+    ## 附加标签
+    ##
+    additionalLabels: {}
+
+    ## SampleLimit 定义了每个抓取可接受的样本数限制。
+    ##
+    sampleLimit: 0
+
+    ## TargetLimit 定义了可接受的抓取目标数的限制。
+    ##
+    targetLimit: 0
+
+    ## 每个抓取可接受的标签数的限制。仅在 Prometheus 2.27.0 及更高版本中有效。
+    ##
+    labelLimit: 0
+
+    ## 每个抓取可接受的标签名长度的限制。仅在 Prometheus 2.27.0 及更高版本中有效。
+    ##
+    labelNameLengthLimit: 0
+
+    ## 每个抓取可接受的标签值长度的限制。仅在 Prometheus 2.27.0 及更高版本中有效。
+    ##
+    labelValueLengthLimit: 0
+
+    ## proxyUrl: 应用于抓取的代理 URL。
+    ##
+    proxyUrl: ""
+
+    ## scheme: 用于抓取的 HTTP 方案。例如，与 `tlsConfig` 一起使用以支持 istio mTLS。
+    scheme: ""
+
+    ## tlsConfig: 用于抓取端点时使用的 TLS 配置。例如，与 istio mTLS 一起使用。
+    ## 类型: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#tlsconfig
+    tlsConfig: {}
+
+    bearerTokenFile:
+
+    ## 抓取后、摄取前应用于样本的指标重新标记配置。
+    ## 参考: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#relabelconfig
+    ##
+    metricRelabelings: []
+    # - action: keep
+    #   regex: 'kube_(daemonset|deployment|pod|namespace|node|statefulset).+'
+    #   sourceLabels: [__name__]
+
+    ## 抓取前应用于样本的重新标记配置
+    ## 参考: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#relabelconfig
+    ##
+    relabelings: []
+    # - sourceLabels: [__meta_kubernetes_pod_node_name]
+    #   separator: ;
+    #   regex: ^(.*)$
+    #   targetLabel: nodename
+    #   replacement: $1
+    #   action: replace
+
+    ## 附加端点
+    ##
+    additionalEndpoints: []
+    # - port: oauth-metrics
+    #   path: /metrics
+
+  ## 影响 thanosRulerpec 的设置
+  ## 参考: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#thanosrulerspec
+  ##
+  thanosRulerSpec:
+    ## 标准对象的元数据。更多信息: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#metadata
+    ## 元数据标签和注解会传播到 ThanosRuler Pods。
+    ##
+    podMetadata: {}
+
+    ##
+    serviceName:
+
+    ## ThanosRuler 的镜像
+    ##
+    image:
+      registry: quay.io
+      repository: thanos/thanos
+      tag: v0.39.1
+      sha: ""
+
+    ## 选择用于 PrometheusRules 发现的命名空间。
+    ## 如果为 nil，则选择自己的命名空间。
+    ## 有关用法，请参阅 https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#namespaceselector
+    ##
+    ruleNamespaceSelector: {}
+
+    ## 如果为 true，则 thanosRuler.thanosRulerSpec.ruleSelector 的 nil 或 {} 值将导致
+    ## Prometheus 资源使用基于 helm 部署中的值创建的选择器，
+    ## 这也将匹配创建的 PrometheusRule 资源
+    ##
+    ruleSelectorNilUsesHelmValues: true
+
+    ## 选择用于目标发现的 PrometheusRules
+    ## 如果为 {}，则选择所有 PrometheusRules
+    ##
+    ruleSelector: {}
+    ## 示例：选择所有带有标签 "prometheus" 且值为 "example-rules" 或 "example-rules-2" 的 PrometheusRules 资源
+    # ruleSelector:
+    #   matchExpressions:
+    #     - key: prometheus
+    #       operator: In
+    #       values:
+    #         - example-rules
+    #         - example-rules-2
+    #
+    ## 示例：选择所有带有标签 "role" 且值为 "example-rules" 的 PrometheusRules 资源
+    # ruleSelector:
+    #   matchLabels:
+    #     role: example-rules
+
+    ## 定义日志格式
+    # 使用 logfmt (默认) 或 json 日志记录
+    logFormat: logfmt
+
+    ## ThanosRuler 配置的日志级别
+    ##
+    logLevel: info
+
+    ## Size 是 ThanosRuler 集群的预期大小。控制器最终会使正在运行的集群大小等于预期大小。
+    replicas: 1
+
+    ## ThanosRuler 将保留数据的时间。默认是 '24h'，并且必须匹配正则表达式
+    ## [0-9]+(ms|s|m|h)（毫秒、秒、分钟、小时）。
+    ##
+    retention: 24h
+
+    ## 连续评估之间的间隔
+    ##
+    evaluationInterval: ""
+
+    ## Storage 是 ThanosRuler 实例将如何使用存储的定义。
+    ## 参考: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/platform/storage.md
+    ##
+    storage: {}
+    # volumeClaimTemplate:
+    #   spec:
+    #     storageClassName: gluster
+    #     accessModes: ["ReadWriteOnce"]
+    #     resources:
+    #       requests:
+    #         storage: 50Gi
+    #     selector: {}
+
+    ## AlertmanagerConfig 定义了连接到 alertmanager 的配置。
+    ## 仅在 Thanos v0.10.0 及更高版本中可用。映射到 alertmanagers.config Thanos Ruler 参数。
+    alertmanagersConfig:
+      # 如果已配置，则使用现有密钥，alertmanagersConfig.secret 将不被使用
+      existingSecret: {}
+        # name: ""
+        # key: ""
+      # 将渲染 alertmanagersConfig 密钥数据并配置为供 Thanos Ruler 自定义资源使用，当 alertmanagersConfig.existingSecret 设置时将被忽略
+      # https://thanos.io/tip/components/rule.md/#alertmanager
+      secret: {}
+        # alertmanagers:
+        # - api_version: v2
+        #   http_config:
+        #     basic_auth:
+        #       username: some_user
+        #       password: some_pass
+        #   static_configs:
+        #     - alertmanager.thanos.io
+        #   scheme: http
+        #   timeout: 10s
+
+    ## DEPRECATED。定义用于向 Alertmanager 发送警报的 URL。对于 Thanos v0.10.0 及更高版本，应使用 alertmanagersConfig。
+    ## 注意: 如果指定了 alertmanagersConfig，则此字段将被忽略。映射到 alertmanagers.url Thanos Ruler 参数。
+    # alertmanagersUrl:
+
+    ## Thanos Ruler 实例可用的外部 URL。这是生成正确 URL 所必需的。如果 Thanos Ruler 不在 DNS 名称的根目录提供服务，则这是必需的。字符串 false
+    ##
+    externalPrefix:
+
+    ## 如果为 true，http://{{ template "kube-prometheus-stack.thanosRuler.name" . }}.{{ template "kube-prometheus-stack.namespace" . }}:{{ .Values.thanosRuler.service.port }}
+    ## 将用作 externalPrefix 的值
+    externalPrefixNilUsesHelmValues: true
+
+    ## ThanosRuler 注册 HTTP 处理程序的路由前缀。这很有用，如果使用 ExternalURL 并且代理正在重写请求的 HTTP 路由，而实际的 ExternalURL 仍然为 true，
+    ## 但服务器在不同的路由前缀下提供服务。例如与 kubectl proxy 一起使用。
+    ##
+    routePrefix: /
+
+    ## ObjectStorageConfig 在 Thanos 中配置对象存储
+    objectStorageConfig:
+      # 如果已配置，则使用现有密钥，objectStorageConfig.secret 将不被使用
+      existingSecret: {}
+        # name: ""
+        # key: ""
+      # 将渲染 objectStorageConfig 密钥数据并配置为供 Thanos Ruler 自定义资源使用，当 objectStorageConfig.existingSecret 设置时将被忽略
+      # https://thanos.io/tip/thanos/storage.md/#s3
+      secret: {}
+        # type: S3
+        # config:
+        #   bucket: ""
+        #   endpoint: ""
+        #   region: ""
+        #   access_key: ""
+        #   secret_key: ""
+
+    ## 在发送到 alertmanager 之前按名称删除的标签
+    ## 映射到 thanos ruler 的 --alert.label-drop 标志。
+    alertDropLabels: []
+
+    ## QueryEndpoints 定义了要从中查询指标的 Thanos querier 端点
+    ## 映射到 thanos ruler 的 --query 标志。
+    queryEndpoints: []
+
+    ## 定义连接到 thanos query 实例的配置。如果定义了此项，则 queryEndpoints 字段将被忽略。
+    ## 映射到 query.config CLI 参数。仅在 thanos v0.11.0 及更高版本中可用。
+    queryConfig:
+      # 如果已配置，则使用现有密钥，queryConfig.secret 将不被使用
+      existingSecret: {}
+        # name: ""
+        # key: ""
+      # 渲染 queryConfig 密钥数据并配置为供 Thanos Ruler 自定义资源使用，当 queryConfig.existingSecret 设置时将被忽略
+      # https://thanos.io/tip/components/rule.md/#query-api
+      secret: {}
+        # - http_config:
+        #     basic_auth:
+        #       username: some_user
+        #       password: some_pass
+        #   static_configs:
+        #     - URL
+        #   scheme: http
+        #   timeout: 10s
+
+    ## Labels 配置 ThanosRuler 的外部标签对。一个默认的副本
+    ## 标签 `thanos_ruler_replica` 将始终作为标签添加，其值为
+    ## pod 的名称，并且它将在警报中被删除。
+    labels: {}
+
+    ## 如果设置为 true，则不会对底层管理的对象执行任何操作，除了删除操作。
+    ##
+    paused: false
+
+    ## 允许为 ThanosRuler 容器设置附加参数
+    ## 参考: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#thanosruler
+    ##
+    additionalArgs: []
+      # - name: remote-write.config
+      #   value: |-
+      #     "remote_write":
+      #     - "name": "receiver-0"
+      #       "remote_timeout": "30s"
+      #       "url": "http://thanos-receiver-0.thanos-receiver:8081/api/v1/receive"
+
+    ## 定义 Pod 调度到的节点
+    ## 参考: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#nodeselector
+    ##
+    nodeSelector: {}
+
+    ## 为单个 Pod 定义资源请求和限制。
+    ## 参考: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+    ##
+    resources: {}
+    # requests:
+    #   memory: 400Mi
+
+    ## Pod 反亲和性可以阻止调度器将 Prometheus 副本调度到同一节点上。
+    ## 默认值 "soft" 意味着调度器应该“倾向于”不将两个副本 Pod 调度到同一节点，但不提供保证。
+    ## 值 "hard" 意味着调度器“必须”不将两个副本 Pod 调度到同一节点上。
+    ## 值 "" 将禁用 Pod 反亲和性，因此不会配置任何反亲和性规则。
+    ##
+    podAntiAffinity: "soft"
+
+    ## 如果启用了反亲和性，则设置用于反亲和性的 topologyKey。
+    ## 例如，可以更改为 failure-domain.beta.kubernetes.io/zone
+    ##
+    podAntiAffinityTopologyKey: kubernetes.io/hostname
+
+    ## 为 thanosRuler 实例分配自定义亲和性规则
+    ## 参考: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/
+    ##
+    affinity: {}
+    # nodeAffinity:
+    #   requiredDuringSchedulingIgnoredDuringExecution:
+    #     nodeSelectorTerms:
+    #     - matchExpressions:
+    #       - key: kubernetes.io/e2e-az-name
+    #         operator: In
+    #         values:
+    #         - e2e-az1
+    #         - e2e-az2
+
+    ## 如果指定，Pod 的容忍度。
+    ## 参考: https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/
+    ##
+    tolerations: []
+    # - key: "key"
+    #   operator: "Equal"
+    #   value: "value"
+    #   effect: "NoSchedule"
+
+    ## 如果指定，Pod 的拓扑扩展约束。
+    ## 参考: https://kubernetes.io/docs/concepts/scheduling-eviction/topology-spread-constraints/
+    ##
+    topologySpreadConstraints: []
+    # - maxSkew: 1
+    #   topologyKey: topology.kubernetes.io/zone
+    #   whenUnsatisfiable: DoNotSchedule
+    #   labelSelector:
+    #     matchLabels:
+    #       app: thanos-ruler
+
+    ## SecurityContext 包含 Pod 级别的安全属性和通用容器设置。
+    ## 默认情况下，非 root 用户，uid 为 1000，gid 为 2000。*v1.PodSecurityContext false
+    ## 参考: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
+    ##
+    securityContext:
+      runAsGroup: 2000
+      runAsNonRoot: true
+      runAsUser: 1000
+      fsGroup: 2000
+      seccompProfile:
+        type: RuntimeDefault
+
+    ## ListenLocal 使 ThanosRuler 服务器在回环上监听，这样它就不会绑定到 Pod IP。
+    ## 注意这仅用于 ThanosRuler UI，不用于 gossip 通信。
+    ##
+    listenLocal: false
+
+    ## Containers 允许注入附加容器。这旨在允许向 ThanosRuler pod 添加身份验证代理。
+    ##
+    containers: []
+
+    # 输出 StatefulSet 定义上的附加卷。
+    volumes: []
+
+    # 输出 StatefulSet 定义上的附加 VolumeMounts。
+    volumeMounts: []
+
+    ## InitContainers 允许注入附加的 initContainers。这旨在允许在启动 prometheus
+    ## 之前对挂载的卷进行一些更改（权限、目录树）
+    initContainers: []
+
+    ## 分配给 Pods 的优先级类
+    ##
+    priorityClassName: ""
+
+    ## 用于 ThanosRuler 的端口名称
+    ##
+    portName: "web"
+
+    ## WebTLSConfig 定义 HTTPS 的 TLS 参数
+    ## 参考: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#thanosrulerwebspec
+    web: {}
+
+    ## 未被上述属性覆盖的附加配置。（通过 tpl 传递）
+    additionalConfig: {}
+
+    ## 未被上述属性覆盖的附加配置。
+    ## 如果您需要高级模板，则很有用。
+    additionalConfigString: ""
+
+  ## ExtraSecret 可用于在额外的密钥中存储各种数据
+  ## (例如，用于存储哈希过的基本认证凭据)
+  extraSecret:
+    ## 如果未设置，名称将自动生成
+    # name: ""
+    annotations: {}
+    data: {}
+  #   auth: |
+  #     foo:$apr1$OFG3Xybp$ckL0FHDAkoXYIlH9.cysT0
+  #     someoneelse:$apr1$DMZX2Z4q$6SbQIfyuLQd.xmo/P0m2c.
+
+## 将此设置为 true 会生成更干净的资源名称，但需要进行数据迁移，因为持久卷的名称会更改。因此，这应仅在初始安装时设置一次。
+##
+cleanPrometheusOperatorObjectNames: false
+
+## 要部署的额外清单。可以是 dict 或 list 类型。
+## 如果是 dict，则忽略键，仅使用值。
+## extraObjects 中包含的项可以定义为 dict 或 string，并通过 tpl 传递。
+extraManifests: null
+  # - apiVersion: v1
+  #   kind: ConfigMap
+  #   metadata:
+  #   labels:
+  #     name: prometheus-extra
+  #   data:
+  #     extra-data: "value"
+  #
+  # 也可以定义为字符串，对于模板化字段名称很有用
+  # - |
+  #   apiVersion: v1
+  #   kind: Secret
+  #   type: Opaque
+  #   metadata:
+  #     name: super-secret
+  #     labels:
+  #       {{- range $key, $value := .Values.commonLabels }}
+  #       {{ $key }}: {{ $value }}
+  #       {{- end }}
+  #     data:
+  #       plaintext: Zm9vYmFy
+  #       templated: '{{ print "foobar" | upper | b64enc }}'

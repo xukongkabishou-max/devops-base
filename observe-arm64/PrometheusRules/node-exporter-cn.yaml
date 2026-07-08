@@ -1,0 +1,235 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  labels:
+    release: kube-prom-stack
+  name: node-exporter
+spec:
+  groups:
+  - name: NodeExporter
+    rules:
+      - alert: 主机状态异常
+        expr: 'up{job="node-exporter"} == 0'
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: 主机状态异常 (instance {{ $labels.instance }})
+          description: "主机状态异常，无法获取到主机监控信息，请检查服务器是否宕机或node-exporter状态\n  主机IP: {{ $labels.instance }}\n  主机名: {{ $labels.nodename }}"
+
+      - alert: "内存报警"
+        expr: round(100 - ((node_memory_MemAvailable_bytes * 100) / node_memory_MemTotal_bytes)) > 80
+        for: 3m
+        labels:
+          severity: serious
+        annotations:
+          summary: "{{ $labels.instance }} 内存使用率过高，请尽快处理！"
+          description: "节点 {{ $labels.instance }} 内存使用率超过80%,当前使用率{{ $value }}%.\n  主机IP: {{ $labels.instance }}\n  主机名: {{ $labels.nodename }}"
+
+      - alert: "内存报警"
+        expr: round(100 - ((node_memory_MemAvailable_bytes * 100) / node_memory_MemTotal_bytes)) > 90
+        for: 3m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.instance }} 内存使用率过高，请尽快处理！"
+          description: "节点 {{ $labels.instance }} 内存使用率超过90%,当前使用率{{ $value }}%.\n  主机IP: {{ $labels.instance }}\n  主机名: {{ $labels.nodename }}"
+
+      - alert: HostMemoryUnderMemoryPressure
+        expr: '(rate(node_vmstat_pgmajfault[1m]) > 1000) * on(instance) group_left (nodename) node_uname_info{nodename=~".+"}'
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host memory under memory pressure (instance {{ $labels.instance }})
+          description: "节点处于高内存压力. High rate of major page faults\n  主机IP: {{ $labels.instance }}\n  主机名: {{ $labels.nodename }}\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: HostUnusualNetworkThroughputIn
+        expr: '(sum by (instance) (rate(node_network_receive_bytes_total[2m])) / 1024 / 1024 > 100) * on(instance) group_left (nodename) node_uname_info{nodename=~".+"}'
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host unusual network throughput in (instance {{ $labels.instance }})
+          description: "主机网卡可能正在接收大量数据 (> 100 MB/s)\n  主机IP: {{ $labels.instance }}\n  主机名: {{ $labels.nodename }}  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: HostUnusualNetworkThroughputOut
+        expr: '(sum by (instance) (rate(node_network_transmit_bytes_total[2m])) / 1024 / 1024 > 100) * on(instance) group_left (nodename) node_uname_info{nodename=~".+"}'
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host unusual network throughput out (instance {{ $labels.instance }})
+          description: "主机正在发送大量数据 (> 100 MB/s)\n  主机IP: {{ $labels.instance }}\n  主机名: {{ $labels.nodename }}  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: 主机磁盘读取速率异常
+        expr: '(sum by (instance) (rate(node_disk_read_bytes_total[2m])) / 1024 / 1024 > 50) * on(instance) group_left (nodename) node_uname_info{nodename=~".+"}'
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host unusual disk read rate (instance {{ $labels.instance }})
+          description: "正在从磁盘读取大量数据 (> 50 MB/s)\n  主机IP: {{ $labels.instance }}\n  主机名: {{ $labels.nodename }}  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: 主机磁盘写入速率异常
+        expr: '(sum by (instance) (rate(node_disk_written_bytes_total[2m])) / 1024 / 1024 > 50) * on(instance) group_left (nodename) node_uname_info{nodename=~".+"}'
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host unusual disk write rate (instance {{ $labels.instance }})
+          description: "正在向磁盘写入大量数据 (> 50 MB/s)\n  主机IP: {{ $labels.instance }}\n  主机名: {{ $labels.nodename }}  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: "磁盘空间报警"
+        expr: round((1 - node_filesystem_avail_bytes{fstype=~"ext4|xfs"} / node_filesystem_size_bytes{fstype=~"ext4|xfs"}) * 100) > 90
+        for: 60s
+        labels:
+          severity: serious
+        annotations:
+          summary: "{{ $labels.instance }}磁盘空间使用超过90%了"
+          description: "{{ $labels.instance }}磁盘使用率超过95%,当前使用率{{ $value }}%.\n  主机IP: {{ $labels.instance }}"
+
+      - alert: "磁盘空间报警"
+        expr: round((1 - node_filesystem_avail_bytes{fstype=~"ext4|xfs"} / node_filesystem_size_bytes{fstype=~"ext4|xfs"}) * 100) > 80
+        for: 60s
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.instance }} 磁盘空间使用超过80%"
+          description: "{{ $labels.instance }} 磁盘使用率超过80%,当前使用率{{ $value }}%.\n  主机IP: {{ $labels.instance }}"
+
+      - alert: HostDiskWillFillIn24Hours
+        expr: '((node_filesystem_avail_bytes * 100) / node_filesystem_size_bytes < 10 and ON (instance, device, mountpoint) predict_linear(node_filesystem_avail_bytes{fstype!~"tmpfs"}[1h], 24 * 3600) < 0 and ON (instance, device, mountpoint) node_filesystem_readonly == 0) * on(instance) group_left (nodename) node_uname_info{nodename=~".+"}'
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host disk will fill in 24 hours (instance {{ $labels.instance }})
+          description: "按照当前的写入速率，预测文件系统将会在24小时内写满\n  主机IP: {{ $labels.instance }}\n  主机名: {{ $labels.nodename }}\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+          # description: "Filesystem is predicted to run out of space within the next 24 hours at current write rate\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: HostOutOfInodes
+        expr: '(node_filesystem_files_free{fstype!="msdosfs"} / node_filesystem_files{fstype!="msdosfs"} * 100 < 10 and ON (instance, device, mountpoint) node_filesystem_readonly == 0) * on(instance) group_left (nodename) node_uname_info{nodename=~".+"}'
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host out of inodes (instance {{ $labels.instance }})
+          description: "磁盘 Inodes 即将耗尽，剩余 Inodes 少于 10%\n  主机IP: {{ $labels.instance }}\n  主机名: {{ $labels.nodename }}\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: HostInodesWillFillIn24Hours
+        expr: '(node_filesystem_files_free{fstype!="msdosfs"} / node_filesystem_files{fstype!="msdosfs"} * 100 < 10 and predict_linear(node_filesystem_files_free{fstype!="msdosfs"}[1h], 24 * 3600) < 0 and ON (instance, device, mountpoint) node_filesystem_readonly{fstype!="msdosfs"} == 0) * on(instance) group_left (nodename) node_uname_info{nodename=~".+"}'
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host inodes will fill in 24 hours (instance {{ $labels.instance }})
+          description: "按照当前的写入速率，文件系统检测到 inodes 将会在未来24小时内耗尽\n  主机: {{ $labels.instance }}\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: HostUnusualDiskReadLatency
+        expr: '(rate(node_disk_read_time_seconds_total[1m]) / rate(node_disk_reads_completed_total[1m]) > 0.1 and rate(node_disk_reads_completed_total[1m]) > 0) * on(instance) group_left (nodename) node_uname_info{nodename=~".+"}'
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host unusual disk read latency (instance {{ $labels.instance }})
+          description: "磁盘写操作延迟过高 (写操作延时 > 100ms)\n  主机IP: {{ $labels.instance }}\n  主机名: {{ $labels.nodename }}\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: HostUnusualDiskWriteLatency
+        expr: '(rate(node_disk_write_time_seconds_total[1m]) / rate(node_disk_writes_completed_total[1m]) > 0.1 and rate(node_disk_writes_completed_total[1m]) > 0) * on(instance) group_left (nodename) node_uname_info{nodename=~".+"}'
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host unusual disk write latency (instance {{ $labels.instance }})
+          description: "磁盘延时增长 (写操作延时 > 100ms)\n  主机: {{ $labels.instance }}\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      # - alert: 服务器CPU负载过高
+      #   expr: '(sum by (instance) (avg by (mode, instance) (rate(node_cpu_seconds_total{mode!="idle"}[2m]))) > 0.01) * on(instance) group_left (nodename) node_uname_info{nodename=~".+"}'
+      #   for: 1m
+      #   labels:
+      #     severity: warning
+      #   annotations:
+      #     summary: Host high CPU load (instance {{ $labels.instance }})
+      #     description: "CPU 负载超过1%\n  主机IP: {{ $labels.instance }}\n  主机名: {{ $labels.nodename }}"
+
+      - alert: 服务器CPU负载过高
+        expr: '(sum by (instance) (avg by (mode, instance) (rate(node_cpu_seconds_total{mode!="idle"}[2m]))) > 0.8) * on(instance) group_left (nodename) node_uname_info{nodename=~".+"}'
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host high CPU load (instance {{ $labels.instance }})
+          description: "CPU 负载超过80%\n  主机IP: {{ $labels.instance }}\n  主机名: {{ $labels.nodename }}"
+
+      - alert: 服务器CPU负载过高
+        expr: '(sum by (instance) (avg by (mode, instance) (rate(node_cpu_seconds_total{mode!="idle"}[2m]))) > 0.9) * on(instance) group_left (nodename) node_uname_info{nodename=~".+"}'
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host high CPU load (instance {{ $labels.instance }})
+          description: "CPU 负载超过90%\n  主机IP: {{ $labels.instance }}\n  主机名: {{ $labels.nodename }}"
+
+      - alert: 服务器CPU负载过高(IOWait)
+        expr: '(avg by (instance) (rate(node_cpu_seconds_total{mode="iowait"}[5m])) * 100 > 10) * on(instance) group_left (nodename) node_uname_info{nodename=~".+"}'
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host CPU high iowait (instance {{ $labels.instance }})
+          description: "CPU iowait > 10%. iowait过高意味着磁盘或网络受到限制.\n  主机IP: {{ $labels.instance }}\n  主机名: {{ $labels.nodename }}"
+
+      - alert: HostUnusualDiskIo
+        expr: '(rate(node_disk_io_time_seconds_total[1m]) > 0.5) * on(instance) group_left (nodename) node_uname_info{nodename=~".+"}'
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host unusual disk IO (instance {{ $labels.instance }})
+          description: "花费在磁盘IO上的时间过高。需检查磁盘问题。\n  主机IP: {{ $labels.instance }}\n  主机名: {{ $labels.nodename }}"
+
+      - alert: HostSwapIsFillingUp
+        expr: '((1 - (node_memory_SwapFree_bytes / node_memory_SwapTotal_bytes)) * 100 > 80) * on(instance) group_left (nodename) node_uname_info{nodename=~".+"}'
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host swap is filling up (instance {{ $labels.instance }})
+          description: "Swap空间达到80%以上\n  主机IP: {{ $labels.instance }}\n  主机名: {{ $labels.nodename }}\n  Swap空间使用率: {{ $value }}"
+
+      - alert: HostOomKillDetected
+        expr: '(increase(node_vmstat_oom_kill[1m]) > 0) * on(instance) group_left (nodename) node_uname_info{nodename=~".+"}'
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host OOM kill detected (instance {{ $labels.instance }})
+          description: "检测到发生主机 OOM kill。\n  主机IP: {{ $labels.instance }}\n  主机名: {{ $labels.nodename }}"
+
+      - alert: HostClockSkew
+        expr: '((node_timex_offset_seconds > 0.05 and deriv(node_timex_offset_seconds[5m]) >= 0) or (node_timex_offset_seconds < -0.05 and deriv(node_timex_offset_seconds[5m]) <= 0)) * on(instance) group_left (nodename) node_uname_info{nodename=~".+"}'
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host clock skew (instance {{ $labels.instance }})
+          description: "Clock skew detected. Clock is out of sync. Ensure NTP is configured correctly on this host.\n  主机IP: {{ $labels.instance }}\n  主机名: {{ $labels.nodename }}\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: 主机时钟不同步
+        expr: '(min_over_time(node_timex_sync_status[1m]) == 0 and node_timex_maxerror_seconds >= 16) * on(instance) group_left (nodename) node_uname_info{nodename=~".+"}'
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host clock not synchronising (instance {{ $labels.instance }})
+          description: "时钟不同步. 确保已经配置NTP.\n  主机IP: {{ $labels.instance }}\n  主机名: {{ $labels.nodename }}\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: HostRequiresReboot
+        expr: '(node_reboot_required > 0) * on(instance) group_left (nodename) node_uname_info{nodename=~".+"}'
+        for: 4h
+        labels:
+          severity: info
+        annotations:
+          summary: Host requires reboot (instance {{ $labels.instance }})
+          description: "{{ $labels.instance }} 需要重启.\n  主机IP: {{ $labels.instance }}\n  主机名: {{ $labels.nodename }}\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"

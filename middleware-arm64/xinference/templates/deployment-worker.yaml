@@ -1,0 +1,95 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "charts.fullname" . }}-worker
+  labels:
+  {{- include "charts.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.config.worker_num | int }}
+  selector:
+    matchLabels:
+      app: xinference-worker
+    {{- include "charts.selectorLabels" . | nindent 6 }}
+  strategy:
+    type: {{ .Values.xinferenceWorker.strategy.type }}
+  template:
+    metadata:
+      labels:
+        app: xinference-worker
+      {{- include "charts.selectorLabels" . | nindent 8 }}
+    spec:
+      initContainers:
+      - name: check-supervisor
+        image: {{ .Values.config.curl_image | quote }}
+        command: {{- toYaml .Values.xinferenceWorker.worker.initContainers.command | nindent 8 }}
+      containers:
+      - args: {{- toYaml .Values.xinferenceWorker.worker.args | nindent 8 }}
+        command:
+        - xinference-worker
+        env:
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: XINFERENCE_MODEL_SRC
+          value: {{ .Values.config.model_src }}
+{{- if .Values.config.persistence.enabled }}
+        - name: XINFERENCE_HOME
+          value: {{ .Values.config.persistence.mountPath }}
+{{- end }}
+{{- range $key, $value := .Values.config.extra_envs }}
+        - name: {{ $key }}
+          value: {{ $value }}
+{{- end }}
+        - name: XINFERENCE_POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+{{- if .Values.config.xinference_image }}
+        image: {{ .Values.config.xinference_image | quote }}
+{{- else }}
+        image: "xprobe/xinference:{{ .Chart.AppVersion }}"
+{{- end }}
+{{- if .Values.config.image_pull_policy }}
+        imagePullPolicy: {{ .Values.config.image_pull_policy }}
+{{- end }}
+        name: worker
+        ports: {{- toYaml .Values.xinferenceWorker.worker.ports | nindent 10 }}
+        resources:
+          requests: {{- toYaml .Values.xinferenceWorker.worker.resources.requests | nindent 12 }}
+{{- if .Values.config.gpu_per_worker }}
+          limits:
+            nvidia.com/gpu: {{ include "charts.intToString" .Values.config.gpu_per_worker | quote }}
+{{- end }}
+        volumeMounts:
+        {{- if .Values.extraVolumeMounts }}
+          {{- toYaml .Values.extraVolumeMounts | nindent 10 }}
+        {{- end }}
+        {{- if .Values.config.persistence.enabled }}
+          - mountPath: {{ .Values.config.persistence.mountPath }}
+            name: xinference-home
+        {{- end }}
+      volumes:
+      {{- if .Values.extraVolumes }}
+        {{- toYaml .Values.extraVolumes | nindent 8 }}
+      {{- end }}
+      {{- if .Values.config.persistence.enabled }}
+        - name: xinference-home
+          persistentVolumeClaim:
+            claimName: xinference-shared-volume-claim
+      {{- end }}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: service-worker
+  labels:
+  {{- include "charts.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.serviceWorker.type }}
+  selector:
+    app: xinference-worker
+  {{- include "charts.selectorLabels" . | nindent 4 }}
+  ports:
+	{{- .Values.serviceWorker.ports | toYaml | nindent 2 }}

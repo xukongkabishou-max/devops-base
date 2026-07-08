@@ -1,0 +1,19 @@
+﻿{{ $var := .externalURL}}{{ range $k,$v:=.alerts }}
+{{if eq $v.status "resolved"}}
+闈炵敓浜х幆澧冨憡璀︽仮澶嶉€氱煡
+馃煛銆愬憡璀﹀悕绉般€憑{$v.labels.alertname}}
+馃毃銆愬憡璀︾骇鍒€憑{ $v.labels.severity}}
+鉁呫€愬憡璀︾姸鎬併€憑{$v.status}}
+馃Л銆愬紑濮嬫椂闂淬€憑{GetCSTtime $v.startsAt}}
+馃Л銆愮粨鏉熸椂闂淬€憑{GetCSTtime $v.endsAt}}
+馃摑銆愬憡璀﹁鎯呫€?{{ $v.annotations.description}}
+{{else}}
+闈炵敓浜х幆澧冨憡璀﹂€氱煡
+馃煛銆愬憡璀﹀悕绉般€憑{$v.labels.alertname}}
+馃毃銆愬憡璀︾骇鍒€憑{ $v.labels.severity}}
+馃敟銆愬憡璀︾姸鎬併€憑{$v.status}}
+馃Л銆愬紑濮嬫椂闂淬€憑{GetCSTtime $v.startsAt}}
+馃摑銆愬憡璀﹁鎯呫€?{{ $v.annotations.description}}
+{{end}}
+{{ end }}
+{{ $urimsg:=""}}{{ range $key,$value:=.commonLabels }}{{$urimsg =  print $urimsg $key "%3D%22" $value "%22%2C" }}{{end}}[馃憠 鐐规垜灞忚斀璇ュ憡璀?馃憟](http://xxxxxx:30083/#/silences/new?filter=%7B{{SplitString $urimsg 0 -3}}%7D)

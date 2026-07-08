@@ -1,0 +1,224 @@
+# common used configurations
+config:
+  xinference_image: harbor.gpu.aliyun.com:543/nlp/xinference:v0.14.2
+  curl_image: harbor.aliyun.com/middleware/curlimages/curl:8.8.0
+  image_pull_policy: IfNotPresent
+  worker_num: 1
+  gpu_per_worker: 1
+  # modelscope
+  model_src: "huggingface"
+  # 服务器上存放自定义模型的路径
+  local_model_path: /data/embedding
+  persistence:
+    enabled: true
+    mountPath: "/data"
+  # any other environments
+  extra_envs: {}
+
+replicas: 1
+
+# 为 Pod 设置 Volume
+extraVolumes:
+  # 挂载注册模型使用到的文件
+  - name: model-manifests
+    configMap:
+      name: xinference-cm
+  # 挂载服务器上存放自定义模型的路径
+  - name: embedding
+    hostPath:
+      path: /data/embedding 
+      type: Directory
+
+# 为容器设置 VolumeMounts，将上面 extraVolumes 配置的卷挂载到 Pod 中的容器
+extraVolumeMounts:
+  - name: model-manifests
+    mountPath: /xinference/models
+  - name: embedding
+    mountPath: /data/embedding
+ 
+
+exterConfig:
+  # 模型注册使用到的文件
+  register-launch.sh: |
+    #!/bin/bash
+    set -xu
+    cd $(dirname $0)
+    # 等待 xinference 启动
+    # sleep 10
+    # until curl -sf localhost:9997; do echo "wait xinference start"; sleep 1; done
+    # 注册模型
+    xinference register --model-type embedding  --file bce-base-embedding.json --persist -e http://service-supervisor:9997
+    xinference register --model-type embedding  --file bge-base-embedding-sql.json --persist -e http://service-supervisor:9997
+    xinference register --model-type embedding  --file sop-bge-base-embedding.json --persist -e http://service-supervisor:9997
+    xinference register --model-type rerank --file bce-base-reranker.json --persist -e http://service-supervisor:9997
+    xinference register --model-type rerank --file bge-reranker-base-sql.json --persist -e http://service-supervisor:9997
+    xinference register --model-type rerank --file sop-bge-base-rerank.json --persist -e http://service-supervisor:9997
+    # 启动模型
+    xinference launch --model-name bge-embedding-base-sql --model-type embedding -e http://service-supervisor:9997 --gpu-idx 0
+    xinference launch --model-name bge-reranker-base-sql --model-type rerank -e http://service-supervisor:9997 --gpu-idx 0
+    xinference launch --model-name bce-embedding-base --model-type embedding -e http://service-supervisor:9997 --gpu-idx 0
+    xinference launch --model-name bce-reranker-base --model-type rerank -e http://service-supervisor:9997 --gpu-idx 0
+    xinference launch --model-name sop-bge-base --model-type embedding -e http://service-supervisor:9997 --gpu-idx 0
+    xinference launch --model-name sop-bge-base-rerank --model-type rerank -e http://service-supervisor:9997 --gpu-idx 0
+  unregister.sh: |
+    set -exu
+    cd $(dirname $0)
+    # 等待 xinference 启动
+    # sleep 10
+    # until curl -sf localhost:9997; do echo "wait xinference start"; sleep 1; done
+    xinference unregister --model-type embedding -e http://service-supervisor:9997 --model-name bce-embedding-base
+    xinference unregister --model-type embedding -e http://service-supervisor:9997 --model-name bge-embedding-base-sql
+    xinference unregister --model-type embedding -e http://service-supervisor:9997 --model-name sop-bge-base
+    xinference unregister --model-type rerank -e http://service-supervisor:9997 --model-name bce-reranker-base
+    xinference unregister --model-type rerank -e http://service-supervisor:9997 --model-name bge-reranker-base-sql
+    xinference unregister --model-type rerank -e http://service-supervisor:9997 --model-name sop-bge-base-rerank
+  bce-base-embedding.json: |
+    {
+        "model_name": "bce-embedding-base",
+        "dimensions": 768,
+        "max_tokens": 512,
+        "language": ["zh"],
+        "model_uri": "/data/embedding/bce-embedding-base_v1"
+    }
+  bce-base-reranker.json: |
+    {
+        "model_name": "bce-reranker-base",
+        "type": "normal",
+        "language": ["en", "zh", "multilingual"],
+        "model_uri": "/data/embedding/bce-reranker-base_v1"
+    }
+  bge-base-embedding-sql.json: |
+    {
+        "model_name": "bge-embedding-base-sql",
+        "dimensions": 768,
+        "max_tokens": 512,
+        "language": ["zh"],
+        "model_uri": "/data/embedding/bge-embedding-sql-base_v1.1"
+    }
+  bge-reranker-base-sql.json: |
+    {
+        "model_name": "bge-reranker-base-sql",
+        "type": "normal",
+        "language": ["en", "zh", "multilingual"],
+        "model_uri": "/data/embedding/bge-reranker-sql-base_v1.1"
+    }
+  sop-bge-base-embedding.json: |
+    {
+        "model_name": "sop-bge-base",
+        "dimensions": 768,
+        "max_tokens": 512,
+        "language": ["zh"],
+        "model_uri": "/data/embedding/sop-bge-base-wrl-1008"
+    }
+  sop-bge-base-rerank.json: |
+    {
+        "model_name": "sop-bge-base-rerank",
+        "language": ["zh"],
+        "model_uri": "/data/embedding/sop-bge-base-rerank-wrl-1011"
+    }
+
+
+
+storageClass:
+  name: local
+  spec:
+    # place your configs here for the storage class
+    provisioner: kubernetes.io/no-provisioner
+    volumeBindingMode: WaitForFirstConsumer
+pv:
+  accessModes:
+    - ReadWriteMany
+  capacity:
+    # actually no limit for local-storage.
+    # if you want to change this, your storage class should support `resize`
+    storage: 20Gi
+  hostPath:
+    path: /tmp/xinference
+  persistentVolumeReclaimPolicy: Delete
+  storageClassName: "local"
+pvc:
+  accessModes:
+    # the volume can be mounted as read-write by many nodes.
+    - ReadWriteMany
+  sharedVolumeClaim:
+    storageRequest: 10Gi
+  storageClassName: "local"
+  volumeMode: ""
+serviceWeb:
+  ports:
+  - nodePort: 30003
+    port: 9997
+    protocol: TCP
+    targetPort: 9997
+  # change this to `LoadBalancer` if you use cloud platform
+  type: NodePort
+serviceSupervisor:
+  ports:
+  - name: service-supervisor-oscar
+    port: 9999
+    protocol: TCP
+    targetPort: 9999
+  - name: service-supervisor-web
+    port: 9997
+    protocol: TCP
+    targetPort: 9997
+  type: ClusterIP
+serviceWorker:
+  ports:
+  - port: 30001
+    protocol: TCP
+    targetPort: 30001
+  type: ClusterIP
+serviceXinference:
+  ports:
+  - port: 9997
+    protocol: TCP
+    targetPort: 9997
+    nodePort: 9997
+  type: NodePort
+xinferenceSupervisor:
+  supervisor:
+    command:
+    - xinference-local
+    # - xinference-supervisor
+    args:
+    - --port
+    - "9997"
+    - --host
+    - 0.0.0.0
+    - --log-level
+    - debug
+    # - --supervisor-port
+    # - "9999"
+    ports:
+      - containerPort: 9997
+        name: web
+      - containerPort: 9999
+        name: oscar
+    resources:
+      limits:
+        cpu: "4"
+        memory: 8Gi
+        nvidia.com/gpu: 1
+xinferenceWorker:
+  strategy:
+    type: Recreate
+  worker:
+    initContainers:
+      command: [ 'sh', '-c', "until curl -v http://service-supervisor:9997/v1/address; do echo waiting for supervisor; sleep 1; done" ]
+    args:
+    - -e
+    - http://service-supervisor:9997
+    - --host
+    - 0.0.0.0
+    - --worker-port
+    - "30001"
+    - --log-level
+    - debug
+    ports:
+      - containerPort: 30001
+    resources:
+      requests:
+        cpu: "2"
+        memory: 8Gi
+        # nvidia.com/gpu: 1

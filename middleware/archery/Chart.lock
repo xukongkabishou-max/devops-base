@@ -1,0 +1,12 @@
+dependencies:
+- name: redis
+  repository: https://raw.githubusercontent.com/bitnami/charts/archive-full-index/bitnami
+  version: 15.7.6
+- name: mysql
+  repository: https://raw.githubusercontent.com/bitnami/charts/archive-full-index/bitnami
+  version: 8.8.35
+- name: goinception
+  repository: https://douban.github.io/charts/
+  version: 0.3.1
+digest: sha256:97306ce93e8e68fe2d24210f88143168154bd1ad35079729d08cb3e2800a507d
+generated: "2025-03-03T07:32:40.878943222Z"

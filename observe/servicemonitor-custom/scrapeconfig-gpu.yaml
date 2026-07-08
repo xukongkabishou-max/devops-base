@@ -1,0 +1,18 @@
+﻿apiVersion: monitoring.coreos.com/v1alpha1
+kind: ScrapeConfig
+metadata:
+  name: dcgm-exporter-external
+  namespace: observe
+  labels:
+    release: kube-prom-stack
+spec:
+  # 鎸囧畾 metrics 璺緞
+  metricsPath: /metrics
+  jobName: dcgm-exporter-external
+  staticConfigs:
+    - labels:
+        # job 鏍囩鍙互瑕嗙洊 `jobName` 鎸囧畾鐨?job 鍚嶇О
+        job: dcgm-exporter-external
+      targets:
+        - xxxxxx:9400
+        - xxxxxx:9401

@@ -1,0 +1,11 @@
+{{- if not .Values.existingConfigMap -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: xinference-cm
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "charts.labels" . | nindent 4 }}
+data:
+  {{- toYaml .Values.exterConfig | nindent 2 }}
+{{- end -}}

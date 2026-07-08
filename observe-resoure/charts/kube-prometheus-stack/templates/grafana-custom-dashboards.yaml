@@ -1,0 +1,19 @@
+{{- $root := . }}
+{{- range $path, $_ := .Files.Glob "files/dashboards/**/*.json" }}
+{{- $parts := splitList "/" $path }}
+{{- $folder := index $parts 2 }}
+{{- $file := base $path }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ printf "%s-dashboard-%s" $root.Release.Name ($file | trimSuffix ".json") | trunc 63 | trimSuffix "-" }}
+  namespace: {{ $root.Release.Namespace }}
+  labels:
+    grafana_dashboard: "1"
+  annotations:
+    k8s-sidecar-target-directory: /tmp/dashboards/{{ $folder }}
+data:
+  {{ $file }}: |-
+{{ $root.Files.Get $path | indent 4 }}
+{{- end }}

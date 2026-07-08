@@ -1,0 +1,13 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: local
+  # 这里只放 annotations 或 labels，不要放 storage 相关的配置
+  annotations:
+    # 如果你需要保留 kubectl 的最后应用配置注解，可以在这里加，但通常不需要手动写
+    # kubectl.kubernetes.io/last-applied-configuration: ...
+provisioner: openebs.io/local
+reclaimPolicy: Delete
+volumeBindingMode: WaitForFirstConsumer
+allowVolumeExpansion: false
+

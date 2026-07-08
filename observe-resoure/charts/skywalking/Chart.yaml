@@ -1,0 +1,29 @@
+apiVersion: v2
+dependencies:
+- condition: elasticsearch.enabled
+  name: elasticsearch
+  repository: https://helm.elastic.co/
+  version: ~7.17.1
+- condition: postgresql.enabled
+  name: postgresql
+  repository: https://raw.githubusercontent.com/bitnami/charts/archive-full-index/bitnami
+  version: 12.1.2
+- alias: banyandb
+  condition: banyandb.enabled
+  name: skywalking-banyandb-helm
+  repository: oci://registry-1.docker.io/apache
+  version: 0.3.0
+description: Helm Chart for Apache SkyWalking
+home: https://skywalking.apache.org
+icon: https://raw.githubusercontent.com/apache/skywalking-kubernetes/master/logo/sw-logo-for-chart.jpg
+maintainers:
+- email: hanahmily@gmail.com
+  name: hanahmily
+- email: innerpeace.zhai@gmail.com
+  name: innerpeacez
+- email: kezhenxu94@163.com
+  name: kezhenxu94
+name: skywalking-helm
+sources:
+- https://github.com/apache/skywalking-helm
+version: 4.7.0

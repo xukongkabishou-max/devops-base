@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  master:
+    image: harbor.aliyun.com/middleware/apache/seatunnel:2.3.8
+    container_name: seatunnel_master
+    restart: always
+    environment:
+      - ST_DOCKER_MEMBER_LIST=172.16.0.2,172.16.0.3
+    entrypoint: >
+      /bin/sh -c "
+      /opt/seatunnel/bin/seatunnel-cluster.sh -r master
+      "    
+    ports:
+      - "5801:5801"  
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+    networks:
+      seatunnel_network:
+        ipv4_address: 172.16.0.2
+
+  worker1:
+    image: harbor.aliyun.com/middleware/apache/seatunnel:2.3.8
+    container_name: seatunnel_worker_1
+    restart: always
+    environment:
+      - ST_DOCKER_MEMBER_LIST=172.16.0.2,172.16.0.3
+    entrypoint: >
+      /bin/sh -c "
+      /opt/seatunnel/bin/seatunnel-cluster.sh -r worker
+      " 
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+    depends_on:
+      - master
+    networks:
+      seatunnel_network:
+        ipv4_address: 172.16.0.3
+
+  #worker2:
+  #  image: apache/seatunnel:2.3.8
+  #  container_name: seatunnel_worker_2
+  #  restart: always
+  #  environment:
+  #    - ST_DOCKER_MEMBER_LIST=172.16.0.2,172.16.0.3,172.16.0.4
+  #  entrypoint: >
+  #    /bin/sh -c "
+  #    /opt/seatunnel/bin/seatunnel-cluster.sh -r worker
+  #    " 
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '2'
+    #       memory: 4G
+  #  depends_on:
+  #    - master
+  #  networks:
+  #    seatunnel_network:
+  #      ipv4_address: 172.16.0.4
+
+networks:
+  seatunnel_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.16.0.0/24

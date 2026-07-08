@@ -1,0 +1,126 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jaeger
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jaeger
+  template:
+    metadata:
+      labels:
+        app: jaeger
+    spec:
+      containers:
+      - name: jaeger
+        image: harbor.aliyun.com/middleware/jaegertracing/all-in-one:1.6.0
+        resources:
+          limits:
+            cpu: 2
+            memory: 6Gi
+          requests:
+            cpu: 10m
+            memory: 10Mi
+        env:
+        - name: COLLECTOR_ZIPKIN_HTTP_PORT
+          value: "9411"
+        ports:
+        - name: jaeger-5775-udp
+          containerPort: 5775
+          protocol: UDP
+        - name: jaeger-6831-udp
+          containerPort: 6831
+          protocol: UDP
+        - name: jaeger-6832-udp
+          containerPort: 6832
+          protocol: UDP
+        - name: jaeger-5778
+          containerPort: 5778
+        - name: jaeger-16686
+          containerPort: 16686
+        - name: jaeger-14268
+          containerPort: 14268
+        - name: jaeger-14269
+          containerPort: 14269
+        - name: jaeger-9411
+          containerPort: 9411
+      restartPolicy: Always
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jaeger
+spec:
+  selector:
+    app: jaeger
+  ports:
+  - name: jaeger-5775-udp
+    port: 5775
+    targetPort: 5775
+    protocol: UDP
+  - name: jaeger-6831-udp
+    port: 6831
+    targetPort: 6831
+    protocol: UDP
+  - name: jaeger-6832-udp
+    port: 6832
+    targetPort: 6832
+    protocol: UDP
+  - name: jaeger-5778
+    port: 5778
+    targetPort: 5778
+  - name: jaeger-14268
+    port: 14268
+    targetPort: 14268
+  - name: jaeger-14269
+    port: 14269
+    targetPort: 14269
+  - name: jaeger-9411
+    port: 9411
+    targetPort: 9411
+  type: ClusterIP
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jaeger-nodeport
+  labels:
+    app: jaeger
+spec:
+  selector:
+    app: jaeger
+  ports:
+  - name: jaeger-16686
+    port: 16686
+    nodePort: 30086
+    targetPort: 16686
+  - name: jaeger-6831-udp
+    port: 6831
+    nodePort: 30087
+    targetPort: 6831
+    protocol: UDP
+  type: NodePort
+
+
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    app: jaeger
+    release: kube-prom-stack
+  name: jaeger
+spec:
+  endpoints:
+  - honorLabels: true
+    path: /metrics
+    port: jaeger-16686
+  namespaceSelector:
+    matchNames:
+    - observe
+  selector:
+    matchLabels:
+      app: jaeger

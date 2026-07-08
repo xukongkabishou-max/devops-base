@@ -1,0 +1,53 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
+
+dorisOperator:
+  # the namespace of doris operator deployed, is not provided be set in values.yaml, please use the helm command specify, example "helm install -n doris"
+  image:
+    repository: harbor.gpu.aliyun.com:543/apache/doris
+    tag: operator-latest
+    imagePullSecret: ""
+    # ImagePullSecret specify the secret that record the credentials, if the repository of image is private. example as follows:
+    # imagePullSecret: "my-registry-key"
+    imagePullPolicy: "Always"
+    # imagePullPolicy
+  nodeSelector: {}
+    # specify a class nodes to have the operator pod.
+    # kubernetes.io/arch: amd64
+    # kubernetes.io/os: linux
+    # app.kubernetes.node.name: "k8s-node1"
+  resources: {}
+  # resources used to specify compute resources, default is 2c 4Gi, the resource follow k8s requests and limits config.(https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#requests-and-limits)
+  # requests:
+  #   memory: "4Gi"
+  #   cpu: 4
+  # limits:
+  #   memory: "4Gi"
+  #   cpu: 4
+  nodeAffinity: {}
+  # node affinity for operator pod scheduling.
+  #   requiredDuringSchedulingIgnoredDuringExecution:
+  #     nodeSelectorTerms:
+  #       - matchFields:
+  #           - key: metadata.name
+  #             operator: In
+  #             values:
+  #               - target-host-name
+  # create aggregate-cluster role, see https://kubernetes.io/docs/reference/access-authn-authz/rbac/#user-facing-roles
+  enableAggregatedClusterRole: false
+

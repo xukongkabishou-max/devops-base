@@ -1,0 +1,64 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  labels:
+    # labels与Prometheus CRD中match ruleSelector -> matchLabels保持一致。
+    release: kube-prom-stack
+  name: ecmas
+spec:
+  groups:
+  - name: ECMAS
+    rules:
+      - alert: "ECMAS首Token大于6s"
+        expr: 'round(rate(createMessage_seconds_sum[1m])/rate(createMessage_seconds_count[1m]), 0.01) > 6'
+        for: 0s
+        labels:
+          severity: critical
+        annotations:
+          summary: ECMAS首Token大于6s
+          description: "ECMAS首Token大于6s<br> 实际耗时: {{ $value }}s<br> <a href=\"http://grafana-gpu.prod.aliyun.com:8800/d/ce83e684dcqv4c/ecmas首token?from=now-5m&to=now&timezone=browser&var-appId={{ $labels.appId }}&var-tenantId={{ $labels.tenantId }}\">查看详情</a>"
+
+      - alert: "embedding响应耗时大于0.25s"
+        expr: 'round(rate(request_service_index_seconds_sum{index="embedding调用"}[1m])/rate(request_service_index_seconds_count{index="embedding调用"}[1m]), 0.01) > 0.25'
+        for: 0s
+        labels:
+          severity: critical
+        annotations:
+          summary: embedding响应耗时大于0.25s
+          description: "embedding响应耗时大于0.25s<br> 实际耗时: {{ $value }}s<br> <a href=\"http://grafana-gpu.prod.aliyun.com:8800/d/ce8rll5cuimf4d/python-业务指标?from=now-5m&to=now&var-index=embedding调用&var-worker_id={{ $labels.worker_id }}\">查看详情</a>"
+
+      - alert: "rerank响应耗时大于0.7s"
+        expr: 'round(rate(request_service_index_seconds_sum{index="rerank调用"}[1m])/rate(request_service_index_seconds_count{index="rerank调用"}[1m]), 0.01) > 0.7'
+        for: 0s
+        labels:
+          severity: critical
+        annotations:
+          summary: rerank响应耗时大于0.7s
+          description: "rerank响应耗时大于0.7s<br> 实际耗时: {{ $value }}s<br> <a href=\"http://grafana-gpu.prod.aliyun.com:8800/d/ce8rll5cuimf4d/python-业务指标?from=now-5m&to=now&var-index=rerank调用&var-worker_id={{ $labels.worker_id }}\">查看详情</a>"
+
+      - alert: "ECMAS登录响应耗时大于0.5s"
+        expr: 'round(rate(http_server_requests_seconds_sum{job="ecmas-admin", uri="/auth/v1/login"}[1m])/rate(http_server_requests_seconds_count{job="ecmas-admin", uri="/auth/v1/login"}[1m]), 0.01) > 0.5'
+        for: 0s
+        labels:
+          severity: critical
+        annotations:
+          summary: rerank响应耗时大于0.5s
+          description: "rerank响应耗时大于0.5s<br> 实际耗时: {{ $value }}s<br> <a href=\"http://grafana-gpu.prod.aliyun.com:8800/d/ee990bqfj9nuoe/api耗时-new?from=now-5m&to=now&var-job=ecmas-admin&var-uri=/auth/v1/login\">查看详情</a>"
+
+      - alert: "RAG召回响应耗时大于1.7s"
+        expr: 'round(rate(http_server_requests_seconds_sum{job="rag-core", uri="/rag/retrieval"}[1m])/rate(http_server_requests_seconds_count{job="rag-core", uri="/rag/retrieval"}[1m]), 0.01) > 1.7'
+        for: 0s
+        labels:
+          severity: critical
+        annotations:
+          summary: RAG召回响应耗时大于1.7s
+          description: "RAG召回响应耗时大于1.7s<br> 实际耗时: {{ $value }}s<br> <a href=\"http://grafana-gpu.prod.aliyun.com:8800/d/ee990bqfj9nuoe/api耗时-new?from=now-5m&to=now&var-job=rag-core&var-uri=/rag/retrieval\">查看详情</a>"
+
+      - alert: "接口异常"
+        expr: 'round(rate(http_server_requests_seconds_count{status=~"4..|5.."}[1m]), 0.01) > 0'
+        for: 0s
+        labels:
+          severity: critical
+        annotations:
+          summary: 接口异常
+          description: "接口异常<br> 应用: {{ $labels.job }}<br> 方法: {{ $labels.method }}<br> 状态码: {{ $labels.status }}<br> 接口: {{ $labels.uri }}<br> 报错: {{ $labels.exception }}<br> <a href=\"http://grafana-gpu.prod.aliyun.com:8800/d/ee990bqfj9nuoe/api耗时-new?from=now-1h&to=now&var-job={{ $labels.job }}&var-uri={{ $labels.uri }}&var-status={{ $labels.status }}\">查看详情</a>"

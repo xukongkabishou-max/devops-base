@@ -1,0 +1,146 @@
+{{- if .Values.config.persistence.enabled }}
+
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: xinference-shared-volume
+  labels:
+    pv: xinference-pv
+  {{- include "charts.labels" . | nindent 4 }}
+spec: {{- toYaml .Values.pv | nindent 2 }}
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: xinference-shared-volume-claim
+  labels:
+  {{- include "charts.labels" . | nindent 4 }}
+spec:
+  accessModes: {{- toYaml .Values.pvc.accessModes | nindent 4 }}
+{{- if .Values.pvc.storageClassName }}
+  storageClassName: {{ .Values.pvc.storageClassName }}
+{{- end }}
+{{- if .Values.pvc.volumeMode }}
+  volumeMode: {{ .Values.pvc.volumeMode }}
+{{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.pvc.sharedVolumeClaim.storageRequest | quote }}
+  selector:
+    matchLabels:
+      pv: xinference-pv
+{{- end }}
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "charts.fullname" . }}-supervisor
+  labels:
+  {{- include "charts.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicas }}
+  selector:
+    matchLabels:
+      app: xinference-supervisor
+    {{- include "charts.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        app: xinference-supervisor
+      {{- include "charts.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+      - args: {{- toYaml .Values.xinferenceSupervisor.supervisor.args | nindent 8 }}
+        command: {{- toYaml .Values.xinferenceSupervisor.supervisor.command | nindent 8 }}
+        env:
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: XINFERENCE_POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+{{- if .Values.config.persistence.enabled }}
+        - name: XINFERENCE_HOME
+          value: {{ .Values.config.persistence.mountPath }}
+{{- end }}
+{{- range $key, $value := .Values.config.extra_envs }}
+        - name: {{ $key }}
+          value: {{ $value }}
+{{- end }}
+{{- if .Values.config.xinference_image }}
+        image: {{ .Values.config.xinference_image | quote }}
+{{- else }}
+        image: "xprobe/xinference:{{ .Chart.AppVersion }}"
+{{- end }}
+{{- if .Values.config.image_pull_policy }}
+        imagePullPolicy: {{ .Values.config.image_pull_policy }}
+{{- end }}
+        name: supervisor
+        ports: {{- toYaml .Values.xinferenceSupervisor.supervisor.ports | nindent 10 }}
+        resources: {{- toYaml .Values.xinferenceSupervisor.supervisor.resources | nindent 10 }}
+        volumeMounts:
+        {{- if .Values.extraVolumeMounts }}
+          {{- toYaml .Values.extraVolumeMounts | nindent 10 }}
+        {{- end }}
+        {{- if .Values.config.persistence.enabled }}
+          - mountPath: {{ .Values.config.persistence.mountPath }}
+            name: xinference-home
+        {{- end }}
+      volumes:
+      {{- if .Values.extraVolumes }}
+        {{- toYaml .Values.extraVolumes | nindent 8 }}
+      {{- end }}
+      {{- if .Values.config.persistence.enabled }}
+        - name: xinference-home
+          persistentVolumeClaim:
+            claimName: xinference-shared-volume-claim
+      {{- end }}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: service-supervisor
+  labels:
+  {{- include "charts.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.serviceSupervisor.type }}
+  selector:
+    app: xinference-supervisor
+  {{- include "charts.selectorLabels" . | nindent 4 }}
+  ports:
+	{{- .Values.serviceSupervisor.ports | toYaml | nindent 2 }}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: xinference
+  labels:
+  {{- include "charts.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.serviceSupervisor.type }}
+  selector:
+    app: xinference-supervisor
+  {{- include "charts.selectorLabels" . | nindent 4 }}
+  ports:
+	{{- .Values.serviceSupervisor.ports | toYaml | nindent 2 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: service-web
+  labels:
+  {{- include "charts.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.serviceWeb.type }}
+  selector:
+    app: xinference-supervisor
+  {{- include "charts.selectorLabels" . | nindent 4 }}
+  ports:
+	{{- .Values.serviceWeb.ports | toYaml | nindent 2 }}

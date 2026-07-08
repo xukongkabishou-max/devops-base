@@ -1,0 +1,20 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    app: jaeger
+    release: kube-prom-stack
+  name: jaeger
+  namespace: observe
+spec:
+  endpoints:
+  - honorLabels: true
+    path: /metrics
+    port: jaeger-16686
+  namespaceSelector:
+    matchNames:
+    - observe
+  selector:
+    matchLabels:
+      app: jaeger

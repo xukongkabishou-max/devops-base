@@ -1,0 +1,13 @@
+apiVersion: v2
+appVersion: 2.3.9
+description: SeaTunnel is a next-generation, high-performance, distributed data integration
+  tool, capable of synchronizing vast amounts of data daily. It's trusted by numerous
+  companies for its efficiency and stability.
+home: https://seatunnel.apache.org
+icon: https://seatunnel.apache.org/image/logo.png
+keywords:
+- seatunnel
+- integration
+name: seatunnel-helm
+type: application
+version: 2.3.9

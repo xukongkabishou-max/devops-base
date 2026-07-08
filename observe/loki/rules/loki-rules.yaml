@@ -1,0 +1,16 @@
+groups:
+  - name: "App-Error-Log"
+    rules:
+    - alert: "30s内应用发生ERROR级别日志"
+      expr: count_over_time({app=~".+", app!~".*loki.*"} |= `ERROR`[30s]) > 0
+      for: 0s
+      labels:
+        severity: warnning
+      annotations:
+        summary: 30s内应用发生ERROR级别日志
+        description: |-
+          应用发生ERROR级别日志
+          命名空间: {{ $labels.namespace }}
+          Pod: {{ $labels.pod }}
+          Labels: {{ $labels }}
+

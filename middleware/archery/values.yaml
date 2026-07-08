@@ -1,0 +1,314 @@
+﻿# Default values for archery.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+image:
+  repository: harbor.aliyun.com/middleware/hhyo/archery
+  tag: v1.11.3
+  pullPolicy: IfNotPresent
+
+nameOverride: ""
+fullnameOverride: ""
+serviceAccount:
+  create: true
+  name: ""
+
+service:
+  type: NodePort
+  port: 9123
+  targetPort: 9123
+  nodePort: 30123
+
+deployment:
+  labels: {}
+  annotations: {}
+
+ingress:
+  enabled: false
+  className: "nginx"
+  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+  paths:
+    - /
+  servicePort: 9123
+
+  hosts:
+    - dba.archery.local
+  tls: []
+  #  - secretName: chart-example-tls
+  #    hosts:
+  #      - chart-example.local
+
+
+# subcharts redis
+redis:
+  embedded: false
+  url: "redis://:hykmc6085e@192.168.10.2:6379/10"
+  # urlSecret: ""
+  # urlSecretKey: "CACHE_URL"
+  dingdingUrl: "redis://:hykmc6085e@192.168.10.2:6379/11"
+  # dingdingUrlSecret: ""
+  # dingdingUrlSecretKey: "DINGDING_CACHE_URL"
+  # embedded 涓?false, 浼氫娇鐢ㄥ閮ㄧ殑 redis, 涓嬫柟鐨?redis 灏变笉浼氱敓鏁?
+  architecture: standalone
+  auth:
+    password: "REDIS_PASSWORD"
+  master:
+    persistence:
+      enabled: false
+      size: 8Gi
+      # storageClass: ""
+
+# subcharts mysql
+mysql:
+  embedded: false
+  url: "mysql://archery:ef9uMnES6sXQ4C4@192.168.10.2:3306/archery"
+  # urlSecret: ""
+  # urlSecretKey: "DATABASE_URL"
+  # embedded 涓?false鏃? 浼氫娇鐢ㄥ閮ㄧ殑 mysql, 涓嬫柟鐨?mysql 閰嶇疆涓嶄細鐢熸晥
+  architecture: standalone
+  auth:
+    database: archery
+    rootPassword: "MYSQL_ROOT_PASSWORD"
+  primary:
+    configuration: |-
+      [mysqld]
+      default_authentication_plugin=mysql_native_password
+      skip-name-resolve
+      explicit_defaults_for_timestamp
+      basedir=/opt/bitnami/mysql
+      plugin_dir=/opt/bitnami/mysql/lib/plugin
+      socket=/opt/bitnami/mysql/tmp/mysql.sock
+      datadir=/bitnami/mysql/data
+      tmpdir=/opt/bitnami/mysql/tmp
+      bind-address=0.0.0.0
+      pid-file=/opt/bitnami/mysql/tmp/mysqld.pid
+      log-error=/opt/bitnami/mysql/logs/mysqld.log
+      port            = 3306
+      skip-external-locking
+      lower_case_table_names=1
+      default-time_zone = '+8:00'
+      innodb_buffer_pool_size = 512M
+      server-id              = 100
+      log_bin                        = mysql-bin.log
+      expire_logs_days        = 1
+      max_binlog_size         = 500M
+      character-set-server = utf8mb4
+      collation-server = utf8mb4_general_ci
+      slow_query_log_file = mysql-slow.log
+      slow_query_log      = 1
+      long_query_time = 1
+      [client]
+      default-character-set=utf8mb4
+      socket=/opt/bitnami/mysql/tmp/mysql.sock
+      plugin_dir=/opt/bitnami/mysql/lib/plugin
+      [mysqldump]
+      quick
+      quote-names
+      max_allowed_packet      = 1024M
+      [manager]
+      port=3306
+      socket=/opt/bitnami/mysql/tmp/mysql.sock
+      pid-file=/opt/bitnami/mysql/tmp/mysqld.pid
+
+    persistence:
+      enabled: true
+      accessModes:
+        - ReadWriteOnce
+      size: 20Gi
+      ## Persistent Volume Storage Class
+      ## If defined, storageClassName: <storageClass>
+      ## If set to "-", storageClassName: "", which disables dynamic provisioning
+      ## If undefined (the default) or set to null, no storageClassName spec is
+      ##   set, choosing the default provisioner.  (gp2 on AWS, standard on
+      ##   GKE, AWS & OpenStack)
+      ##
+      # storageClass: "-"
+
+      # storageClass: ""
+
+goinception:
+  embedded: true
+  image:
+    repository: harbor.aliyun.com/middleware/hanchuanchuan/goinception
+    tag: v1.3.0
+    pullPolicy: IfNotPresent
+
+  nameOverride: ""
+  fullnameOverride: ""
+
+  overrideConfigs:
+    image:
+      repository: harbor.aliyun.com/middleware/busybox
+      tag: 1.28
+      pullPolicy: IfNotPresent
+
+  service:
+    type: ClusterIP
+    port: 4000
+    targetPort: 4000
+
+  initEnv:
+    - name: BACKUP_HOST
+      value: "192.168.10.2"
+    - name: BACKUP_PORT
+      value: "3306"
+      # mysql superuser
+    - name: BACKUP_USER
+      value: "root"
+    - name: BACKUP_PASSWORD
+      value: "tnN352Wfc5k6wiJ"
+  # you can override more options , please see goinception chart readme and values
+  # https://github.com/douban/charts/blob/master/charts/goinception/values.yaml
+
+resources: {}
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # limits:
+  #  cpu: 100m
+  #  memory: 128Mi
+  # requests:
+  #  cpu: 100m
+  #  memory: 128Mi
+envs:
+  - name: CSRF_TRUSTED_ORIGINS
+    value: "http://xxxxxx:30123"
+
+volumeMounts:
+  # 璇锋厧閲嶆洿鏀逛互涓嬪€? 濡傞渶鏇存敼寤鸿澶嶅埗绮樿创鐒跺悗鎸夐渶姹傚鍔犻敭鍊煎
+  # 鏇存敼鍚庡彲鑳戒細閫犳垚閮ㄥ垎鍏朵粬閰嶇疆澶辨晥
+  - name: archery-settings
+    subPath: local_settings.py
+    mountPath: /opt/archery/local_settings.py
+  - name: archery-settings
+    subPath: soar.yaml
+    mountPath: /etc/soar.yaml
+  - name: archery-settings
+    subPath: analysis_slow_query.sh
+    mountPath: /opt/archery/src/script/analysis_slow_query.sh
+  - name: archery-settings
+    subPath: startup.sh
+    mountPath: /opt/archery/src/docker/startup.sh
+  - name: archery-settings
+    subPath: init-archery.sh
+    mountPath: /opt/archery/src/docker/init-archery.sh
+  - name: archery-settings
+    subPath: createsuperuser.py
+    mountPath: /opt/archery/src/docker/createsuperuser.py
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+volumes:
+  # 璇锋厧閲嶆洿鏀逛互涓嬪€? 濡傞渶鏇存敼寤鸿澶嶅埗绮樿创鐒跺悗鎸夐渶姹傚鍔犻敭鍊煎
+  # 鏇存敼鍚庡彲鑳戒細閫犳垚閮ㄥ垎鍏朵粬閰嶇疆澶辨晥
+  - name: archery-settings
+    configMap:
+      name: archery-config
+      defaultMode: 420
+  - name: archery-download
+    hostPath:
+      path: /data/archery/downloads
+  - name: archery-script
+    hostPath:
+      path: /data/archery/scripts
+
+configMap:
+  enabled: true
+  # admin password
+  superuser:
+    username: admin
+    password: UyaHSnDBgr3kmJYGv9Wv
+    email: "wangjian@ecmas.ai"
+  data:
+    local_settings.py: |-
+        # -*- coding: UTF-8 -*-
+        # override your configs here
+    soar.yaml: |-
+        # 鏄惁鍏佽娴嬭瘯鐜涓庣嚎涓婄幆澧冮厤缃浉鍚?
+        allow-online-as-test: false
+        # 鏄惁娓呯悊娴嬭瘯鏃朵骇鐢熺殑涓存椂鏂囦欢
+        drop-test-temporary: true
+        # 璇硶妫€鏌ュ皬宸ュ叿
+        only-syntax-check: false
+        sampling-data-factor: 100
+        sampling: false
+        sampling-statistic-target: 100
+        profiling: false
+        trace: false
+        # 鏃ュ織绾у埆锛孾0:Emergency, 1:Alert, 2:Critical, 3:Error, 4:Warning, 5:Notice, 6:Informational, 7:Debug]
+        log-level: 3
+        log-output: /opt/archery/logs/soar.log
+        # 浼樺寲寤鸿杈撳嚭鏍煎紡
+        report-type: markdown
+        ignore-rules:
+        - ""
+        # 鍚彂寮忕畻娉曠浉鍏抽厤缃?
+        max-join-table-count: 5
+        max-group-by-cols-count: 5
+        max-distinct-count: 5
+        max-index-cols-count: 5
+        max-total-rows: 9999999
+        spaghetti-query-length: 2048
+        allow-drop-index: false
+        # EXPLAIN鐩稿叧閰嶇疆
+        explain-sql-report-type: pretty
+        explain-type: extended
+        explain-format: traditional
+        explain-warn-select-type:
+        - ""
+        explain-warn-access-type:
+        - ALL
+        explain-max-keys: 3
+        explain-min-keys: 0
+        explain-max-rows: 10000
+        explain-warn-extra:
+        - ""
+        explain-max-filtered: 100
+        explain-warn-scalability:
+        - O(n)
+        query: ""
+        list-heuristic-rules: false
+        list-test-sqls: false
+        verbose: true
+    analysis_slow_query.sh: |-
+        #!/bin/bash
+        DIR="$( cd "$( dirname "$0"  )" && pwd  )"
+        cd $DIR
+        #閰嶇疆archery鏁版嵁搴撶殑杩炴帴鍦板潃
+        monitor_db_host="archery-mysql"
+        monitor_db_port=3306
+        monitor_db_user="root"
+        monitor_db_password="MYSQL_ROOT_PASSWORD"
+        monitor_db_database="archery"
+        #瀹炰緥鎱㈡棩蹇椾綅缃?
+        slowquery_file="/home/mysql/log_slow.log"
+        pt_query_digest="/usr/bin/pt-query-digest"
+        #瀹炰緥杩炴帴淇℃伅
+        hostname="mysql_host:mysql_port" # 鍜宎rchery瀹炰緥閰嶇疆鍐呭淇濇寔涓€鑷达紝鐢ㄤ簬archery鍋氱瓫閫?
+        #鑾峰彇涓婃鍒嗘瀽鏃堕棿锛屽垵濮嬪寲鏃惰鍒犻櫎last_analysis_time_$hostname鏂囦欢锛屽彲鍒嗘瀽鍏ㄩ儴鏃ュ織鏁版嵁
+        if [ -s last_analysis_time_$hostname ]; then
+            last_analysis_time=`cat last_analysis_time_$hostname`
+        else
+            last_analysis_time='1000-01-01 00:00:00'
+        fi
+        #鏀堕泦鏃ュ織
+        #RDS闇€瑕佸鍔?-no-version-check閫夐」
+        $pt_query_digest \
+        --user=$monitor_db_user --password=$monitor_db_password --port=$monitor_db_port \
+        --review h=$monitor_db_host,D=$monitor_db_database,t=mysql_slow_query_review  \
+        --history h=$monitor_db_host,D=$monitor_db_database,t=mysql_slow_query_review_history  \
+        --no-report --limit=100% --charset=utf8 \
+        --since "$last_analysis_time" \
+        --filter="\$event->{Bytes} = length(\$event->{arg}) and \$event->{hostname}=\"$hostname\"  and \$event->{client}=\$event->{ip} " \
+        $slowquery_file > /tmp/analysis_slow_query.log
+        echo `date +"%Y-%m-%d %H:%M:%S"`>last_analysis_time_$hostname
+
+sidecars: []

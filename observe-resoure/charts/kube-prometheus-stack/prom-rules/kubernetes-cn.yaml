@@ -1,0 +1,217 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  labels:
+    # labels与Prometheus CRD中match ruleSelector -> matchLabels保持一致。
+    release: kube-prom-stack
+  name: kube-state-metrics
+spec:
+  groups:
+  - name: KubestateExporter
+    rules:
+      - alert: "K8S节点NotReady"
+        expr: 'kube_node_status_condition{condition="Ready",status="true"} == 0'
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: K8S节点NotReady (node {{ $labels.node }})
+          description: "K8S节点NotReady: {{ $labels.node }}\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: "K8S节点内存紧张"
+        expr: 'kube_node_status_condition{condition="MemoryPressure",status="true"} == 1'
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: K8S节点内存紧张 (node {{ $labels.node }})
+          description: "K8S节点内存紧张: {{ $labels.node }}\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: "K8S节点磁盘空间紧张"
+        expr: 'kube_node_status_condition{condition="DiskPressure",status="true"} == 1'
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: K8S节点磁盘空间紧张，节点： (node {{ $labels.node }})
+          description: "K8S节点磁盘空间紧张，节点： {{ $labels.node }}"
+
+      - alert: "K8S节点网络不可达"
+        expr: 'kube_node_status_condition{condition="NetworkUnavailable",status="true"} == 1'
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: K8S节点网络不可达 (instance {{ $labels.instance }})
+          description: "K8S节点网络不可达: {{ $labels.node }}"
+
+      - alert: "Kubernetes节点Pod数量超出限制"
+        expr: 'sum by (node) ((kube_pod_status_phase{phase="Running"} == 1) + on(uid, instance) group_left(node) (0 * kube_pod_info{pod_template_hash=""})) / sum by (node) (kube_node_status_allocatable{resource="pods"}) * 100 > 90'
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: Kubernetes Node out of pod capacity (instance {{ $labels.instance }})
+          description: "节点 {{ $labels.node }} 上运行Pod数量将要超过节点可运行Pod数量限制"
+
+      - alert: "K8SPodOOMKilled"
+        expr: '(kube_pod_container_status_restarts_total - kube_pod_container_status_restarts_total offset 10m >= 1) and ignoring (reason) min_over_time(kube_pod_container_status_last_terminated_reason{reason="OOMKilled"}[10m]) == 1'
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: K8S Pod OOM ({{ $labels.namespace }}/{{ $labels.pod }}:{{ $labels.container }})
+          description: "Pod 容器在最近10分钟内发生 OOMKilled\n  命名空间: {{ $labels.namespace }}\n  Pod: {{ $labels.pod }}\n  Container: {{ $labels.container }}\n  最近10分钟OOM次数: {{ $value }}"
+
+      - alert: "K8S Job 执行失败"
+        expr: 'kube_job_status_failed > 0'
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: K8S Job 执行失败 ({{ $labels.namespace }}/{{ $labels.job_name }})
+          description: "Job 执行失败\n  命名空间: {{ $labels.namespace }}\n  Job: {{ $labels.job_name }}"
+
+      - alert: "K8S Job 未执行"
+        expr: 'kube_job_status_active == 0 and kube_job_status_failed == 0 and kube_job_status_succeeded == 0 and (time() - kube_job_status_start_time) > 600'
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: Kubernetes Job not starting ({{ $labels.namespace }}/{{ $labels.job_name }})
+          description: "Job 超过10分钟未执行\n  命名空间: {{ $labels.namespace }}\n  Job: {{ $labels.job_name }}"
+
+      - alert: "Kubernetes Persistentvolumeclaim Pending"
+        expr: 'kube_persistentvolumeclaim_status_phase{phase="Pending"} == 1'
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: Kubernetes PersistentVolumeClaim pending ({{ $labels.namespace }}/{{ $labels.persistentvolumeclaim }})
+          description: "PersistentVolumeClaim pending\n  命名空间: {{ $labels.namespace }}\n  PVC: {{ $labels.persistentvolumeclaim }}"
+
+      - alert: "KubernetesVolume可用空间少于10%"
+        expr: 'kubelet_volume_stats_available_bytes / kubelet_volume_stats_capacity_bytes * 100 < 10'
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: Kubernetes Volume out of disk space (instance {{ $labels.instance }})
+          description: "Volume 空间使用率超过 90%\n  PV: {{ $labels.instance }}\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: "Kubernetes PV 异常"
+        expr: 'kube_persistentvolume_status_phase{phase=~"Failed|Pending", job="kube-state-metrics"} > 0'
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: Kubernetes PersistentVolumeClaim pending ({{ $labels.namespace }}/{{ $labels.persistentvolumeclaim }})
+          description: "Persistent volume {{ $labels.persistentvolume }} 状态异常"
+
+      - alert: "KubernetesStatefulset异常"
+        expr: 'kube_statefulset_replicas != kube_statefulset_status_replicas_ready > 0'
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: Kubernetes StatefulSet down ({{ $labels.namespace }}/{{ $labels.statefulset }})
+          description: "StatefulSet 异常\n  命名空间: {{ $labels.namespace }}\n  StatefulSet: {{ $labels.statefulset }}"
+
+      - alert: "Pod近1分钟CPU使用率超过75%"
+        expr: 'sum(irate(container_cpu_usage_seconds_total{container!="",container!="POD"}[1m])) by (namespace,pod) / sum(container_spec_cpu_quota{container!="",container!="POD"}/100000) by (namespace,pod) * 100 <= 100 or on() vector(0) >= 75'
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: Kubernetes Pod high CPU usage
+          description: "Pod 近1分钟 CPU 使用率高于 75%\n  命名空间: {{ $labels.namespace }}\n  Pod: {{ $labels.pod }}\n  CPU使用率: {{ $value }}"
+
+      - alert: "Pod近1分钟CPU使用率超过90%"
+        expr: 'sum(irate(container_cpu_usage_seconds_total{container!="",container!="POD"}[1m])) by (namespace,pod) / sum(container_spec_cpu_quota{container!="",container!="POD"}/100000) by (namespace,pod) * 100 <= 100 or on() vector(0) >= 90'
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: Kubernetes Pod high CPU usage
+          description: "Pod 近1分钟 CPU 使用率高于 90%\n  命名空间: {{ $labels.namespace }}\n  Pod: {{ $labels.pod }}\n  CPU使用率: {{ $value }}"
+
+      - alert: "Pod近1分钟内存使用率超过80%"
+        expr: '(sum(container_memory_working_set_bytes{container !="",container!="POD"}) by (pod,namespace)/ sum(container_spec_memory_limit_bytes{container !="",container!="POD"}) by (pod, namespace) * 100) <= 100 or on() vector(0) >= 80'
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: Kubernetes Pod high MEM usage
+          description: "Pod 近1分钟内存使用率高于 80%\n  命名空间: {{ $labels.namespace }}\n  Pod: {{ $labels.pod }}\n  内存使用率: {{ $value }}"
+
+      - alert: "Pod近1分钟内存使用率超过90%"
+        expr: '(sum(container_memory_working_set_bytes{container !="",container!="POD"}) by (pod,namespace)/ sum(container_spec_memory_limit_bytes{container !="",container!="POD"}) by (pod, namespace) * 100) <= 100 or on() vector(0) >= 90'
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: Kubernetes Pod high MEM usage
+          description: "Pod 近1分钟内存使用率高于 90%\n  命名空间: {{ $labels.namespace }}\n  Pod: {{ $labels.pod }}\n  内存使用率: {{ $value }}"
+
+      - alert: "Kubernetes Pod 健康状态异常"
+        expr: 'sum by (namespace, pod) (kube_pod_status_phase{phase=~"Pending|Unknown|Failed"}) > 0'
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: Kubernetes Pod not healthy ({{ $labels.namespace }}/{{ $labels.pod }})
+          description: "Pod 状态异常超过5分钟\n  命名空间: {{ $labels.namespace }}\n  Pod: {{ $labels.pod }}"
+
+      - alert: "Kubernetes Pod 重启"
+        expr: 'increase(kube_pod_container_status_restarts_total[1m]) > 1'
+        for: 0s
+        labels:
+          severity: warning
+        annotations:
+          summary: Kubernetes pod crash looping ({{ $labels.namespace }}/{{ $labels.pod }})
+          description: "检测到 Pod 重启，详细信息: \n  命名空间: {{ $labels.namespace }}\n  Pod: {{ $labels.pod }}\n  容器: {{ $labels.container }}"
+
+      - alert: "Kubernetes Pod CrashLooping"
+        expr: 'increase(kube_pod_container_status_restarts_total[1m]) > 3'
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: Kubernetes pod crash looping ({{ $labels.namespace }}/{{ $labels.pod }})
+          description: "Pod CrashLoopBackoff。检测到容器连续重启\n  命名空间: {{ $labels.namespace }}\n  Pod: {{ $labels.pod }}\n  Container: {{ $labels.container }}\n 重启次数: {{ $value }}"
+
+      - alert: "Deployment可用副本状态异常"
+        expr: 'kube_deployment_spec_replicas != kube_deployment_status_replicas_available'
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Deployment可用副本状态异常 ({{ $labels.namespace }}/{{ $labels.deployment }})
+          description: "Deployment可用副本状态异常: \n  命名空间: {{ $labels.namespace }}\n  Deployment 名称: {{ $labels.deployment }}"
+
+      - alert: "KubernetesStatefulsetReplicasMismatch"
+        expr: 'kube_statefulset_status_replicas_ready != kube_statefulset_status_replicas'
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Kubernetes StatefulSet replicas mismatch (instance {{ $labels.instance }})
+          description: "StatefulSet 副本数量未达到预期\n  命名空间: {{ $labels.namespace }}\n  StatefulSet: {{ $labels.statefulset }}"
+
+      - alert: "K8S客户端证书将会在一周内过期"
+        expr: 'apiserver_client_certificate_expiration_seconds_count{job="apiserver"} > 0 and histogram_quantile(0.01, sum by (job, le) (rate(apiserver_client_certificate_expiration_seconds_bucket{job="apiserver"}[5m]))) < 7*24*60*60'
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: K8S客户端证书将会在一周内过期 (instance {{ $labels.instance }})
+          description: "K8S客户端证书将会在一周内过期"
+
+      - alert: "K8S客户端证书将会在一天内过期"
+        expr: 'apiserver_client_certificate_expiration_seconds_count{job="apiserver"} > 0 and histogram_quantile(0.01, sum by (job, le) (rate(apiserver_client_certificate_expiration_seconds_bucket{job="apiserver"}[5m]))) < 24*60*60'
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: K8S客户端证书将会在一天内过期 (instance {{ $labels.instance }})
+          description: "K8S客户端证书将会在一天内过期\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
