@@ -1,0 +1,47 @@
+{
+  "base_url": "http://model.example.test:8000",
+  "chat_endpoint": "/v1/chat/completions",
+  "models_endpoint": "/v1/models",
+  "model": "example-local-model",
+  "api_key": "fake-api-key",
+  "encoding": "cl100k_base",
+  "connect_timeout_seconds": 3,
+  "read_timeout_seconds": 120,
+  "temperature": 0.0,
+  "default_max_output_tokens": 128,
+  "dataset": {
+    "seed": 2026,
+    "case_count": 60,
+    "short_token_target": 64,
+    "medium_token_target": 512,
+    "long_token_target": 2048
+  },
+  "functional": {
+    "run_stream_test": true,
+    "run_negative_tests": true
+  },
+  "soak": {
+    "duration_minutes": 60,
+    "interval_seconds": 5
+  },
+  "locust": {
+    "wait_min_seconds": 0.5,
+    "wait_max_seconds": 2.0,
+    "stages": [
+      {"duration_seconds": 60, "users": 1, "spawn_rate": 1},
+      {"duration_seconds": 180, "users": 4, "spawn_rate": 1},
+      {"duration_seconds": 300, "users": 8, "spawn_rate": 2},
+      {"duration_seconds": 420, "users": 16, "spawn_rate": 4},
+      {"duration_seconds": 480, "users": 32, "spawn_rate": 8},
+      {"duration_seconds": 600, "users": 4, "spawn_rate": 8}
+    ]
+  },
+  "thresholds": {
+    "minimum_success_rate": 0.99,
+    "maximum_p95_latency_seconds": 30,
+    "maximum_empty_answer_rate": 0.0,
+    "maximum_content_failure_rate": 0.01,
+    "maximum_latency_degradation_rate": 0.2
+  }
+}
+
