@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #===============================================================================
-# 02-setup-trashbox.sh - 全局垃圾箱
+# 02-setup-trashbox.sh - 全局垃圾箱(删除时提示回收站路径与自动清理周期)
 #   1. 安装 trash-cli (apt 安装前直接 set 清华源, 不做恢复)
 #   2. 创建全局回收站 /data/trashbox (所有用户共用)
 #   3. /etc/profile.d/trash.sh: 共享回收站环境(trash-list 等工具使用)
@@ -88,8 +88,13 @@ if [ ${#args[@]} -eq 0 ]; then
   exec /usr/bin/rm "$@"
 fi
 
-# 受保护目录(精确匹配绝对真实路径)
-protected_paths="/ /etc /root /home /proc /usr /usr/local /bin /sbin /boot /dev /run /var /lib /lib64 /opt /srv /tmp /data"
+# 受保护目录(下面会统一 realpath 归一化, 覆盖 /bin->/usr/bin 等符号链接情形)
+protected_paths="/ /etc /root /home /proc /sys /usr /usr/local /bin /sbin /boot /dev /run /var /lib /lib64 /opt /srv /tmp /mnt /media /data"
+protected_resolved=" "
+for p in $protected_paths; do
+  rp=$(realpath -- "$p" 2>/dev/null)
+  [ -n "$rp" ] && protected_resolved="$protected_resolved$rp "
+done
 
 for target in "${args[@]}"; do
   abs_path=$(realpath -- "$target" 2>/dev/null)
@@ -102,15 +107,29 @@ for target in "${args[@]}"; do
   fi
   abs_path="${abs_path%/}"
   [ -z "$abs_path" ] && abs_path="/"
-  for p in $protected_paths; do
-    if [ "$abs_path" = "$p" ]; then
+  case "$protected_resolved" in
+    *" $abs_path "*)
       echo "rm: 禁止删除系统关键目录: $abs_path (旁路请用 /usr/bin/rm)" >&2
       exit 1
-    fi
-  done
+      ;;
+  esac
 done
 
-trash-put "${args[@]}"
+out=$(trash-put "${args[@]}" 2>&1)
+rc=$?
+if [ "$rc" -ne 0 ]; then
+  [ -n "$out" ] && printf '%s
+' "$out" >&2
+  exit "$rc"
+fi
+
+# 仅交互终端显示提示(脚本/cron 等非终端场景静默, 不污染输出)
+if [ -t 1 ]; then
+  echo "已移入回收站(非永久删除): ${args[*]}"
+  echo "回收站路径: $XDG_DATA_HOME/Trash/files"
+  echo "自动清理: 每周日 00:00 清空(最长保留 7 天); 立即清空请执行 /usr/local/bin/clean-trashbox.sh"
+fi
+exit 0
 EOF
 chmod 755 /usr/local/bin/rm
 echo "== 5. 写入清理脚本 /usr/local/bin/clean-trashbox.sh =="
